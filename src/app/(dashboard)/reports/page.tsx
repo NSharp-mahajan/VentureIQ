@@ -1,19 +1,38 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Loader2 } from "lucide-react";
 import Link from "next/link";
-
-const MOCK_REPORTS = [
-  { id: "1", name: "Acme Corp", industry: "SaaS", type: "Full Diligence", score: "88/100", date: "Oct 12, 2026" },
-  { id: "2", name: "Nexus Tech", industry: "Deeptech", type: "Market Analysis", score: "72/100", date: "Oct 10, 2026" },
-  { id: "3", name: "FinFlow", industry: "Fintech", type: "Risk Assessment", score: "94/100", date: "Sep 28, 2026" },
-  { id: "4", name: "HealthSync", industry: "Healthtech", type: "Full Diligence", score: "65/100", date: "Sep 15, 2026" },
-  { id: "5", name: "EcoLogistics", industry: "Supply Chain", type: "Financial", score: "81/100", date: "Sep 02, 2026" },
-];
+import { toast } from "sonner";
+import { IReport } from "@/types/report";
 
 export default function ReportsPage() {
+  const [reports, setReports] = useState<IReport[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchReports() {
+      try {
+        const res = await fetch("/api/reports");
+        const data = await res.json();
+        if (data.success) {
+          setReports(data.reports);
+        } else {
+          toast.error(data.error || "Failed to load reports");
+        }
+      } catch {
+        toast.error("An error occurred while fetching reports.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchReports();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -44,30 +63,44 @@ export default function ReportsPage() {
               <TableHead>Company Name</TableHead>
               <TableHead>Industry</TableHead>
               <TableHead>Analysis Type</TableHead>
-              <TableHead>AI Score</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {MOCK_REPORTS.map((report) => (
-              <TableRow key={report.id} className="hover:bg-secondary/10">
-                <TableCell className="font-medium">{report.name}</TableCell>
-                <TableCell><Badge variant="secondary">{report.industry}</Badge></TableCell>
-                <TableCell>{report.type}</TableCell>
-                <TableCell>
-                  <span className={`font-semibold ${parseInt(report.score) > 80 ? 'text-green-600' : parseInt(report.score) > 70 ? 'text-yellow-600' : 'text-red-600'}`}>
-                    {report.score}
-                  </span>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{report.date}</TableCell>
-                <TableCell className="text-right">
-                  <Link href={`/reports/${report.id}`}>
-                    <Button variant="ghost" size="sm">View</Button>
-                  </Link>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
                 </TableCell>
               </TableRow>
-            ))}
+            ) : reports.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  No reports found. Create a new analysis to get started.
+                </TableCell>
+              </TableRow>
+            ) : (
+              reports.map((report) => (
+                <TableRow key={report._id} className="hover:bg-secondary/10">
+                  <TableCell className="font-medium">{report.companyName}</TableCell>
+                  <TableCell><Badge variant="outline">{report.industry || "N/A"}</Badge></TableCell>
+                  <TableCell>{report.analysisType}</TableCell>
+                  <TableCell>
+                    <Badge variant={report.status === "completed" ? "default" : report.status === "failed" ? "destructive" : "secondary"}>
+                      {report.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{new Date(report.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-right">
+                    <Link href={`/reports/${report._id}`}>
+                      <Button variant="ghost" size="sm">View</Button>
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

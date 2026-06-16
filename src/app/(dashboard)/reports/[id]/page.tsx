@@ -1,16 +1,84 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Share2, ArrowLeft } from "lucide-react";
+import { Download, Share2, ArrowLeft, Loader2, BrainCircuit } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
+import { IReport } from "@/types/report";
 
-export default async function ReportPage(props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
-  const { id } = params;
+export default function ReportPage() {
+  const params = useParams();
+  const id = params.id as string;
+  
+  const [report, setReport] = useState<IReport | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data fetching based on ID
-  const companyName = id === "1" ? "Acme Corp" : "Sample Company";
+  useEffect(() => {
+    async function fetchReport() {
+      try {
+        const res = await fetch(`/api/reports/${id}`);
+        const data = await res.json();
+        
+        if (data.success) {
+          setReport(data.report);
+        } else {
+          toast.error(data.error || "Failed to load report");
+        }
+      } catch {
+        toast.error("An error occurred while fetching the report.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    if (id) fetchReport();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <p className="text-muted-foreground">Loading report data...</p>
+      </div>
+    );
+  }
+
+  if (!report) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <p className="text-muted-foreground">Report not found.</p>
+        <Link href="/reports">
+          <Button variant="outline">Back to Reports</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  if (report.status === "processing") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center max-w-md mx-auto">
+        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center animate-pulse">
+          <BrainCircuit className="w-8 h-8 text-primary" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold font-heading">Analysis is being processed</h2>
+          <p className="text-muted-foreground">
+            Our AI engine is currently analyzing {report.companyName}. This usually takes a few minutes. Check back soon.
+          </p>
+        </div>
+        <Link href="/reports">
+          <Button variant="outline"><ArrowLeft className="w-4 h-4 mr-2" /> Back to Library</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const { reportData } = report;
 
   return (
     <div className="space-y-6">
@@ -21,8 +89,10 @@ export default async function ReportPage(props: { params: Promise<{ id: string }
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold font-heading">{companyName}</h1>
-          <p className="text-muted-foreground">Due Diligence Report • Generated on Oct 12, 2026</p>
+          <h1 className="text-3xl font-bold font-heading">{report.companyName}</h1>
+          <p className="text-muted-foreground">
+            Due Diligence Report • Generated on {new Date(report.createdAt).toLocaleDateString()}
+          </p>
         </div>
         <div className="ml-auto hidden sm:flex gap-2">
           <Button variant="outline"><Share2 className="w-4 h-4 mr-2" /> Share</Button>
@@ -31,9 +101,11 @@ export default async function ReportPage(props: { params: Promise<{ id: string }
       </div>
 
       <div className="flex flex-wrap gap-4 mb-6">
-        <Badge variant="default" className="bg-green-600/10 text-green-700 hover:bg-green-600/20">AI Score: 88/100</Badge>
-        <Badge variant="secondary">SaaS</Badge>
-        <Badge variant="secondary">Series B</Badge>
+        <Badge variant="default" className="bg-green-600/10 text-green-700 hover:bg-green-600/20">
+          AI Score: {report.aiScore || 0}/100
+        </Badge>
+        <Badge variant="secondary">{report.industry || "N/A"}</Badge>
+        <Badge variant="secondary">{report.analysisType}</Badge>
       </div>
 
       <Tabs defaultValue="executive" className="w-full">
@@ -48,44 +120,26 @@ export default async function ReportPage(props: { params: Promise<{ id: string }
         <TabsContent value="executive">
           <Card className="border-border/50 shadow-sm">
             <CardHeader><CardTitle>Executive Summary</CardTitle></CardHeader>
-            <CardContent className="prose prose-sm md:prose-base dark:prose-invert max-w-none">
-              <p>{companyName} demonstrates exceptional unit economics with an LTV/CAC ratio of 4.2x. Market penetration is growing 15% MoM, outpacing primary competitors. The core technology provides a significant moat in the enterprise segment.</p>
-              <h3>Key Highlights</h3>
-              <ul>
-                <li>Strong revenue retention (115% NRR).</li>
-                <li>Experienced leadership team with previous successful exits.</li>
-                <li>Clear path to profitability within 18 months.</li>
-              </ul>
+            <CardContent className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap">
+              {reportData?.executiveSummary || "No executive summary available yet."}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="swot">
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card className="border-border/50 bg-green-50/50 dark:bg-green-900/10">
-              <CardHeader><CardTitle className="text-green-700 dark:text-green-400">Strengths</CardTitle></CardHeader>
-              <CardContent><ul className="list-disc pl-5"><li>Proprietary algorithm</li><li>High customer loyalty</li></ul></CardContent>
-            </Card>
-            <Card className="border-border/50 bg-red-50/50 dark:bg-red-900/10">
-              <CardHeader><CardTitle className="text-red-700 dark:text-red-400">Weaknesses</CardTitle></CardHeader>
-              <CardContent><ul className="list-disc pl-5"><li>High burn rate</li><li>Concentrated customer base</li></ul></CardContent>
-            </Card>
-            <Card className="border-border/50 bg-blue-50/50 dark:bg-blue-900/10">
-              <CardHeader><CardTitle className="text-blue-700 dark:text-blue-400">Opportunities</CardTitle></CardHeader>
-              <CardContent><ul className="list-disc pl-5"><li>Expansion into EMEA</li><li>Adjacent product up-sells</li></ul></CardContent>
-            </Card>
-            <Card className="border-border/50 bg-yellow-50/50 dark:bg-yellow-900/10">
-              <CardHeader><CardTitle className="text-yellow-700 dark:text-yellow-400">Threats</CardTitle></CardHeader>
-              <CardContent><ul className="list-disc pl-5"><li>Emerging competitors</li><li>Regulatory changes in data privacy</li></ul></CardContent>
-            </Card>
-          </div>
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader><CardTitle>SWOT Analysis</CardTitle></CardHeader>
+            <CardContent className="whitespace-pre-wrap">
+              {reportData?.swot || "No SWOT analysis available yet."}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="market">
           <Card className="border-border/50 shadow-sm">
             <CardHeader><CardTitle>Market Analysis</CardTitle></CardHeader>
-            <CardContent>
-              <p>The Total Addressable Market (TAM) is estimated at $12B, growing at a CAGR of 18%. The company currently captures &lt;1%, indicating massive headroom for growth.</p>
+            <CardContent className="whitespace-pre-wrap">
+              {reportData?.marketAnalysis || "No market analysis available yet."}
             </CardContent>
           </Card>
         </TabsContent>
@@ -93,11 +147,8 @@ export default async function ReportPage(props: { params: Promise<{ id: string }
         <TabsContent value="risks">
           <Card className="border-border/50 shadow-sm">
             <CardHeader><CardTitle>Risk Assessment</CardTitle></CardHeader>
-            <CardContent>
-              <ul className="space-y-4">
-                <li><strong className="text-destructive">High:</strong> Customer Concentration. Top 3 customers account for 40% of ARR.</li>
-                <li><strong className="text-yellow-600 dark:text-yellow-400">Medium:</strong> Key Person Risk. The CTO holds significant proprietary knowledge undocumented.</li>
-              </ul>
+            <CardContent className="whitespace-pre-wrap">
+              {reportData?.riskAssessment || "No risk assessment available yet."}
             </CardContent>
           </Card>
         </TabsContent>
@@ -105,9 +156,8 @@ export default async function ReportPage(props: { params: Promise<{ id: string }
         <TabsContent value="recommendations">
           <Card className="border-border/50 shadow-sm">
             <CardHeader><CardTitle>Final Recommendations</CardTitle></CardHeader>
-            <CardContent>
-              <p className="font-bold text-lg mb-2 text-green-600">Decision: Proceed with investment.</p>
-              <p>Require mitigation plans for customer concentration in the term sheet. Consider allocating funds specifically for expanding the enterprise sales team.</p>
+            <CardContent className="whitespace-pre-wrap">
+              {reportData?.recommendations || "No recommendations available yet."}
             </CardContent>
           </Card>
         </TabsContent>

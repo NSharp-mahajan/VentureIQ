@@ -1,9 +1,11 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+import { SyncUser } from "@/components/dashboard/SyncUser";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background flex text-foreground">
+      <SyncUser />
       {/* Desktop Sidebar */}
       <div className="hidden md:flex w-64 flex-col fixed inset-y-0 z-50">
         <Sidebar />
