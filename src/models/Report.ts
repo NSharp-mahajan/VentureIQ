@@ -10,15 +10,21 @@ export interface IReportDocument extends Document {
   websiteUrl?: string;
   notes?: string;
   status: "completed" | "processing" | "failed";
+  errorMessage?: string;
   aiScore?: number;
   reportData?: {
     executiveSummary?: string;
     marketAnalysis?: string;
-    competitorAnalysis?: string;
-    swot?: string;
     riskAssessment?: string;
-    revenueOpportunities?: string;
-    recommendations?: string;
+    swot?: {
+      strengths: string[];
+      weaknesses: string[];
+      opportunities: string[];
+      threats: string[];
+    };
+    investmentScore?: number;
+    recommendation?: string;
+    keyInsights?: string[];
   };
   createdAt: Date;
   updatedAt: Date;
@@ -35,15 +41,21 @@ const ReportSchema = new Schema<IReportDocument>(
     websiteUrl: { type: String },
     notes: { type: String },
     status: { type: String, enum: ["completed", "processing", "failed"], default: "processing" },
+    errorMessage: { type: String },
     aiScore: { type: Number },
     reportData: {
       executiveSummary: { type: String },
       marketAnalysis: { type: String },
-      competitorAnalysis: { type: String },
-      swot: { type: String },
       riskAssessment: { type: String },
-      revenueOpportunities: { type: String },
-      recommendations: { type: String },
+      swot: {
+        strengths: [{ type: String }],
+        weaknesses: [{ type: String }],
+        opportunities: [{ type: String }],
+        threats: [{ type: String }],
+      },
+      investmentScore: { type: Number },
+      recommendation: { type: String },
+      keyInsights: [{ type: String }],
     },
   },
   {
@@ -51,5 +63,8 @@ const ReportSchema = new Schema<IReportDocument>(
   }
 );
 
-// Prevent mongoose overwrite model error during hot reload
-export default mongoose.models.Report || mongoose.model<IReportDocument>("Report", ReportSchema);
+// Force mongoose to reload schema during hot reload
+if (mongoose.models.Report) {
+  delete mongoose.models.Report;
+}
+export default mongoose.model<IReportDocument>("Report", ReportSchema);

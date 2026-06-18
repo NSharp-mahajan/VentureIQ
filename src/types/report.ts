@@ -1,13 +1,20 @@
 export type ReportStatus = "completed" | "processing" | "failed";
 
+export interface ISwot {
+  strengths: string[];
+  weaknesses: string[];
+  opportunities: string[];
+  threats: string[];
+}
+
 export interface IReportData {
   executiveSummary?: string;
   marketAnalysis?: string;
-  competitorAnalysis?: string;
-  swot?: string;
   riskAssessment?: string;
-  revenueOpportunities?: string;
-  recommendations?: string;
+  swot?: ISwot;
+  investmentScore?: number;
+  recommendation?: string;
+  keyInsights?: string[];
 }
 
 export interface IReport {
@@ -21,6 +28,7 @@ export interface IReport {
   websiteUrl?: string;
   notes?: string;
   status: ReportStatus;
+  errorMessage?: string;
   aiScore?: number;
   reportData?: IReportData;
   createdAt: Date;

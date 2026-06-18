@@ -2,6 +2,27 @@ import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { connectDB } from "@/lib/db";
 import Report from "@/models/Report";
+import { generateDueDiligenceReport, DueDiligenceInput } from "@/lib/ai/groq";
+
+async function processReportInBackground(reportId: string, input: DueDiligenceInput) {
+  try {
+    await connectDB();
+    const aiData = await generateDueDiligenceReport(input);
+    
+    await Report.findByIdAndUpdate(reportId, {
+      status: "completed",
+      reportData: aiData,
+      aiScore: aiData.investmentScore || 0,
+    });
+  } catch (error) {
+    console.error("Groq generation failed:", error);
+    await connectDB();
+    await Report.findByIdAndUpdate(reportId, {
+      status: "failed",
+      errorMessage: error instanceof Error ? error.message : "Failed to generate AI report.",
+    });
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -45,17 +66,31 @@ export async function POST(req: Request) {
       reportData: {
         executiveSummary: "",
         marketAnalysis: "",
-        competitorAnalysis: "",
-        swot: "",
         riskAssessment: "",
-        revenueOpportunities: "",
-        recommendations: "",
+        swot: { strengths: [], weaknesses: [], opportunities: [], threats: [] },
+        investmentScore: 0,
+        recommendation: "",
+        keyInsights: [],
       },
     });
+
+    const aiInput: DueDiligenceInput = {
+      companyName,
+      industry,
+      targetMarket,
+      analysisType,
+      businessDescription,
+      additionalNotes: notes,
+    };
+
+    // Fire and forget background process
+    processReportInBackground(report._id, aiInput);
 
     return NextResponse.json({ success: true, reportId: report._id });
   } catch (error) {
     console.error("Error creating report:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : "Internal Server Error" 
+    }, { status: 500 });
   }
 }

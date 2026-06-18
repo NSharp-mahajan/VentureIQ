@@ -12,8 +12,14 @@ const RECENT_REPORTS = [
 ];
 
 export default async function DashboardPage() {
-  const user = await currentUser();
-  const userName = user?.firstName || user?.emailAddresses[0]?.emailAddress || "Guest";
+  let user = null;
+  try {
+    user = await currentUser();
+  } catch (error) {
+    console.error("Error fetching user from Clerk:", error);
+  }
+  
+  const userName = user?.firstName || user?.emailAddresses?.[0]?.emailAddress || "Guest";
 
   return (
     <div className="space-y-8 w-full">

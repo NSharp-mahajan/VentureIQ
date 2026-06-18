@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Share2, ArrowLeft, Loader2, BrainCircuit } from "lucide-react";
+import { Download, Share2, ArrowLeft, Loader2, BrainCircuit, AlertCircle, CheckCircle, TrendingUp, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { IReport } from "@/types/report";
@@ -19,27 +19,50 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     async function fetchReport() {
       try {
         const res = await fetch(`/api/reports/${id}`);
         const data = await res.json();
         
+        if (!mounted) return;
+
         if (data.success) {
           setReport(data.report);
+          setLoading(false);
         } else {
           toast.error(data.error || "Failed to load report");
+          setLoading(false);
         }
       } catch {
-        toast.error("An error occurred while fetching the report.");
-      } finally {
-        setLoading(false);
+        if (mounted) {
+          toast.error("An error occurred while fetching the report.");
+          setLoading(false);
+        }
       }
     }
     
-    if (id) fetchReport();
-  }, [id]);
+    if (id && !report) {
+       fetchReport();
+    }
+    
+    // Auto-refresh if processing
+    let intervalId: NodeJS.Timeout;
+    if (report?.status === "processing") {
+      intervalId = setInterval(() => {
+        fetchReport();
+      }, 3000); // Check every 3 seconds
+    }
+    
+    return () => {
+      mounted = false;
+      if (intervalId) clearInterval(intervalId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, report?.status]);
 
-  if (loading) {
+  if (loading && !report) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
@@ -66,9 +89,26 @@ export default function ReportPage() {
           <BrainCircuit className="w-8 h-8 text-primary" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold font-heading">Analysis is being processed</h2>
+          <h2 className="text-2xl font-bold font-heading">AI is Analyzing {report.companyName}</h2>
           <p className="text-muted-foreground">
-            Our AI engine is currently analyzing {report.companyName}. This usually takes a few minutes. Check back soon.
+            Our AI engine is currently researching the market, analyzing risks, and formulating recommendations. This usually takes 10-30 seconds.
+          </p>
+        </div>
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (report.status === "failed") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center max-w-md mx-auto">
+        <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
+          <AlertCircle className="w-8 h-8 text-destructive" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold font-heading">Analysis Failed</h2>
+          <p className="text-muted-foreground">
+            {report.errorMessage || "An unexpected error occurred during the AI generation process."}
           </p>
         </div>
         <Link href="/reports">
@@ -81,8 +121,8 @@ export default function ReportPage() {
   const { reportData } = report;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4 mb-4">
+    <div className="space-y-6 pb-12">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
         <Link href="/reports">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="w-4 h-4" />
@@ -94,70 +134,156 @@ export default function ReportPage() {
             Due Diligence Report • Generated on {new Date(report.createdAt).toLocaleDateString()}
           </p>
         </div>
-        <div className="ml-auto hidden sm:flex gap-2">
-          <Button variant="outline"><Share2 className="w-4 h-4 mr-2" /> Share</Button>
-          <Button><Download className="w-4 h-4 mr-2" /> Export PDF</Button>
+        <div className="sm:ml-auto flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" className="flex-1 sm:flex-none"><Share2 className="w-4 h-4 mr-2" /> Share</Button>
+          <Button className="flex-1 sm:flex-none"><Download className="w-4 h-4 mr-2" /> Export</Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 mb-6">
-        <Badge variant="default" className="bg-green-600/10 text-green-700 hover:bg-green-600/20">
-          AI Score: {report.aiScore || 0}/100
-        </Badge>
-        <Badge variant="secondary">{report.industry || "N/A"}</Badge>
-        <Badge variant="secondary">{report.analysisType}</Badge>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card className="border-border/50 shadow-sm">
+          <CardContent className="p-4 flex flex-col justify-center items-center text-center">
+            <div className="text-sm font-medium text-muted-foreground mb-1">Investment Score</div>
+            <div className="text-3xl font-bold text-primary">{reportData?.investmentScore || report.aiScore || 0}/100</div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 shadow-sm col-span-1 md:col-span-3">
+          <CardContent className="p-4 flex items-center h-full">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary">{report.industry || "N/A"}</Badge>
+              <Badge variant="secondary">{report.analysisType}</Badge>
+              {reportData?.keyInsights?.slice(0, 2).map((insight, i) => (
+                <Badge key={i} variant="outline" className="text-primary border-primary/20 bg-primary/5">
+                  Insight: {insight.substring(0, 40)}...
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="executive" className="w-full">
-        <TabsList className="mb-4 bg-secondary/20 flex-wrap h-auto">
+        <TabsList className="mb-4 bg-secondary/20 flex-wrap h-auto p-1">
           <TabsTrigger value="executive">Executive Summary</TabsTrigger>
           <TabsTrigger value="swot">SWOT Analysis</TabsTrigger>
-          <TabsTrigger value="market">Market Analysis</TabsTrigger>
-          <TabsTrigger value="risks">Risk Assessment</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+          <TabsTrigger value="market">Market & Risks</TabsTrigger>
+          <TabsTrigger value="recommendations">Recommendation</TabsTrigger>
         </TabsList>
         
         <TabsContent value="executive">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader><CardTitle>Executive Summary</CardTitle></CardHeader>
-            <CardContent className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap">
-              {reportData?.executiveSummary || "No executive summary available yet."}
-            </CardContent>
-          </Card>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="border-border/50 shadow-sm md:col-span-2">
+              <CardHeader><CardTitle>Executive Summary</CardTitle></CardHeader>
+              <CardContent className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap">
+                {reportData?.executiveSummary || "No executive summary available yet."}
+              </CardContent>
+            </Card>
+            <Card className="border-border/50 shadow-sm bg-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary" /> Key Insights
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-4">
+                  {reportData?.keyInsights?.map((insight, idx) => (
+                    <li key={idx} className="flex gap-2 text-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                      <span>{insight}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="swot">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader><CardTitle>SWOT Analysis</CardTitle></CardHeader>
-            <CardContent className="whitespace-pre-wrap">
-              {reportData?.swot || "No SWOT analysis available yet."}
-            </CardContent>
-          </Card>
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="border-border/50 shadow-sm border-t-4 border-t-green-500">
+              <CardHeader>
+                <CardTitle className="text-green-600 flex items-center gap-2">
+                  Strengths
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {reportData?.swot?.strengths?.map((item, i) => (
+                    <li key={i} className="flex gap-2 text-sm"><CheckCircle className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />{item}</li>
+                  )) || <p className="text-muted-foreground text-sm">No strengths identified.</p>}
+                </ul>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50 shadow-sm border-t-4 border-t-amber-500">
+              <CardHeader>
+                <CardTitle className="text-amber-600 flex items-center gap-2">
+                  Weaknesses
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {reportData?.swot?.weaknesses?.map((item, i) => (
+                    <li key={i} className="flex gap-2 text-sm"><AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />{item}</li>
+                  )) || <p className="text-muted-foreground text-sm">No weaknesses identified.</p>}
+                </ul>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50 shadow-sm border-t-4 border-t-blue-500">
+              <CardHeader>
+                <CardTitle className="text-blue-600 flex items-center gap-2">
+                  Opportunities
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {reportData?.swot?.opportunities?.map((item, i) => (
+                    <li key={i} className="flex gap-2 text-sm"><TrendingUp className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />{item}</li>
+                  )) || <p className="text-muted-foreground text-sm">No opportunities identified.</p>}
+                </ul>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50 shadow-sm border-t-4 border-t-red-500">
+              <CardHeader>
+                <CardTitle className="text-red-600 flex items-center gap-2">
+                  Threats
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {reportData?.swot?.threats?.map((item, i) => (
+                    <li key={i} className="flex gap-2 text-sm"><AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />{item}</li>
+                  )) || <p className="text-muted-foreground text-sm">No threats identified.</p>}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="market">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader><CardTitle>Market Analysis</CardTitle></CardHeader>
-            <CardContent className="whitespace-pre-wrap">
-              {reportData?.marketAnalysis || "No market analysis available yet."}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="risks">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader><CardTitle>Risk Assessment</CardTitle></CardHeader>
-            <CardContent className="whitespace-pre-wrap">
-              {reportData?.riskAssessment || "No risk assessment available yet."}
-            </CardContent>
-          </Card>
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader><CardTitle>Market Analysis</CardTitle></CardHeader>
+              <CardContent className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap">
+                {reportData?.marketAnalysis || "No market analysis available yet."}
+              </CardContent>
+            </Card>
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader><CardTitle>Risk Assessment</CardTitle></CardHeader>
+              <CardContent className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap text-destructive/90">
+                {reportData?.riskAssessment || "No risk assessment available yet."}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="recommendations">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader><CardTitle>Final Recommendations</CardTitle></CardHeader>
-            <CardContent className="whitespace-pre-wrap">
-              {reportData?.recommendations || "No recommendations available yet."}
+          <Card className="border-border/50 shadow-sm bg-gradient-to-br from-card to-primary/5">
+            <CardHeader>
+              <CardTitle>Final Recommendation</CardTitle>
+              <CardDescription>AI-generated investment verdict</CardDescription>
+            </CardHeader>
+            <CardContent className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap font-medium">
+              {reportData?.recommendation || "No recommendations available yet."}
             </CardContent>
           </Card>
         </TabsContent>
