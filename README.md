@@ -10,6 +10,8 @@
   [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
   [![Clerk Auth](https://img.shields.io/badge/Clerk_Auth-6C47FF?style=for-the-badge&logo=clerk&logoColor=white)](https://clerk.com/)
+  [![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+  [![Groq AI](https://img.shields.io/badge/Groq_AI-F55036?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com/)
 
   *Simplify the process of evaluating businesses, startup ideas, websites, and pitch decks by automatically generating detailed due diligence reports using Artificial Intelligence.*
 </div>
@@ -86,6 +88,8 @@ This project is built using modern, production-grade tools:
 - **Language**: [TypeScript](https://www.typescriptlang.org/) for end-to-end type safety
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) & [ShadCN UI](https://ui.shadcn.com/) for a premium, accessible design system
 - **Authentication**: [Clerk](https://clerk.com/) for secure, robust identity management
+- **Database**: [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) with Mongoose for scalable report storage
+- **AI Engine**: [Groq SDK](https://groq.com/) powering instantaneous inference using `llama-3.3-70b-versatile`
 - **Animation**: [Framer Motion](https://www.framer.com/motion/) for subtle, professional micro-interactions
 
 ---
@@ -111,14 +115,21 @@ This project is built using modern, production-grade tools:
    ```
 
 3. **Set up environment variables**
-   Create a `.env.local` file in the root directory and add your Clerk credentials:
+   Create a `.env.local` file in the root directory and add your credentials:
    ```env
+   # Clerk Auth
    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_publishable_key
    CLERK_SECRET_KEY=your_secret_key
    NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
    NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
    NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
    NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+
+   # Database
+   MONGODB_URI=your_mongodb_atlas_connection_string
+
+   # AI Generation
+   GROQ_API_KEY=your_groq_api_key
    ```
 
 4. **Run the development server**
