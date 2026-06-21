@@ -7,6 +7,16 @@ export interface DueDiligenceInput {
   analysisType: string;
   businessDescription?: string;
   additionalNotes?: string;
+  scrapedData?: {
+    title: string;
+    description: string;
+    content: string;
+  };
+  documentsData?: {
+    fileName: string;
+    fileType: string;
+    extractedText: string;
+  }[];
 }
 
 export async function generateDueDiligenceReport(input: DueDiligenceInput) {
@@ -17,7 +27,7 @@ export async function generateDueDiligenceReport(input: DueDiligenceInput) {
 
   const groq = new Groq({ apiKey });
 
-  const prompt = `You are an expert AI due diligence analyst. Your job is to analyze the following company and generate a highly professional due diligence report.
+  let prompt = `You are an expert AI due diligence analyst. Your job is to analyze the following company and generate a highly professional due diligence report.
   
 Company Name: ${input.companyName}
 Industry: ${input.industry || "Not provided"}
@@ -25,7 +35,32 @@ Target Market: ${input.targetMarket || "Not provided"}
 Analysis Type: ${input.analysisType}
 Business Description: ${input.businessDescription || "Not provided"}
 Additional Notes: ${input.additionalNotes || "None"}
+`;
 
+  if (input.scrapedData) {
+    prompt += `
+Additionally, we have extracted the following information directly from the company's website. Please use this website information as a PRIMARY source for your analysis.
+
+Website Title: ${input.scrapedData.title}
+Website Description: ${input.scrapedData.description}
+Website Content:
+${input.scrapedData.content}
+`;
+  }
+
+  if (input.documentsData && input.documentsData.length > 0) {
+    prompt += `
+Additionally, the user has uploaded the following internal documents. Please treat this extracted text as a highly credible PRIMARY source for your analysis.
+`;
+    input.documentsData.forEach((doc, idx) => {
+      prompt += `
+--- Document ${idx + 1}: ${doc.fileName} ---
+${doc.extractedText}
+`;
+    });
+  }
+
+  prompt += `
 You must return ONLY a raw, valid JSON object matching the exact structure below. Do not include markdown code blocks (like \`\`\`json). Do not add any text before or after the JSON.
 
 {

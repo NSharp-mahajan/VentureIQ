@@ -17,6 +17,12 @@ export interface IReportData {
   keyInsights?: string[];
 }
 
+export interface IDocumentData {
+  fileName: string;
+  fileType: string;
+  extractedText: string;
+}
+
 export interface IReport {
   _id: string;
   userId: string;
@@ -26,6 +32,12 @@ export interface IReport {
   analysisType: string;
   businessDescription?: string;
   websiteUrl?: string;
+  documents?: IDocumentData[];
+  scrapedData?: {
+    title: string;
+    description: string;
+    content: string;
+  };
   notes?: string;
   status: ReportStatus;
   errorMessage?: string;

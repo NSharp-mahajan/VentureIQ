@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Share2, ArrowLeft, Loader2, BrainCircuit, AlertCircle, CheckCircle, TrendingUp, AlertTriangle } from "lucide-react";
+import { Download, Share2, ArrowLeft, Loader2, BrainCircuit, AlertCircle, CheckCircle, TrendingUp, AlertTriangle, FileText } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { IReport } from "@/types/report";
@@ -165,6 +165,8 @@ export default function ReportPage() {
       <Tabs defaultValue="executive" className="w-full">
         <TabsList className="mb-4 bg-secondary/20 flex-wrap h-auto p-1">
           <TabsTrigger value="executive">Executive Summary</TabsTrigger>
+          <TabsTrigger value="intelligence">Company Intelligence</TabsTrigger>
+          <TabsTrigger value="documents">Document Intelligence</TabsTrigger>
           <TabsTrigger value="swot">SWOT Analysis</TabsTrigger>
           <TabsTrigger value="market">Market & Risks</TabsTrigger>
           <TabsTrigger value="recommendations">Recommendation</TabsTrigger>
@@ -193,6 +195,69 @@ export default function ReportPage() {
                     </li>
                   ))}
                 </ul>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="intelligence">
+          <div className="grid gap-6">
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader><CardTitle>Website Intelligence</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                {!report.scrapedData ? (
+                  <p className="text-muted-foreground text-sm">No website data was provided or successfully extracted for this analysis.</p>
+                ) : (
+                  <>
+                    {report.websiteUrl && (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">Website URL</h4>
+                        <a href={report.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm break-all">
+                          {report.websiteUrl}
+                        </a>
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="text-sm font-semibold mb-1">Page Title</h4>
+                      <p className="text-sm text-muted-foreground">{report.scrapedData.title || "N/A"}</p>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold mb-1">Meta Description</h4>
+                      <p className="text-sm text-muted-foreground">{report.scrapedData.description || "N/A"}</p>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold mb-1">Extracted Content Preview</h4>
+                      <div className="bg-secondary/20 p-4 rounded-md text-xs text-muted-foreground max-h-[300px] overflow-y-auto whitespace-pre-wrap">
+                        {report.scrapedData.content || "No text content extracted."}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="documents">
+          <div className="grid gap-6">
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader><CardTitle>Document Intelligence</CardTitle></CardHeader>
+              <CardContent className="space-y-6">
+                {!report.documents || report.documents.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No documents were uploaded for this analysis.</p>
+                ) : (
+                  report.documents.map((doc, idx) => (
+                    <div key={idx} className="border border-border/50 rounded-lg p-4 bg-secondary/5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="w-5 h-5 text-primary" />
+                        <h4 className="font-semibold text-sm">{doc.fileName}</h4>
+                      </div>
+                      <div className="bg-background border border-border/30 p-3 rounded text-xs text-muted-foreground max-h-[250px] overflow-y-auto whitespace-pre-wrap">
+                        {doc.extractedText || "No text could be extracted from this document."}
+                      </div>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
           </div>

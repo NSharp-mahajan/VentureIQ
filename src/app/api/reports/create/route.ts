@@ -3,10 +3,47 @@ import { currentUser } from "@clerk/nextjs/server";
 import { connectDB } from "@/lib/db";
 import Report from "@/models/Report";
 import { generateDueDiligenceReport, DueDiligenceInput } from "@/lib/ai/groq";
+import { scrapeWebsite } from "@/lib/scraper/websiteScraper";
+import { extractPdfText } from "@/lib/document/pdfParser";
 
-async function processReportInBackground(reportId: string, input: DueDiligenceInput) {
+async function processReportInBackground(
+  reportId: string, 
+  input: DueDiligenceInput, 
+  websiteUrl?: string,
+  filesData?: { name: string; type: string; buffer: Buffer }[]
+) {
   try {
     await connectDB();
+
+    if (websiteUrl) {
+      const scrapedData = await scrapeWebsite(websiteUrl);
+      if (scrapedData) {
+        input.scrapedData = scrapedData;
+        await Report.findByIdAndUpdate(reportId, { scrapedData });
+      }
+    }
+
+    if (filesData && filesData.length > 0) {
+      const processedDocuments = [];
+      for (const file of filesData) {
+        try {
+          const extractedText = await extractPdfText(file.buffer);
+          processedDocuments.push({
+            fileName: file.name,
+            fileType: file.type,
+            extractedText
+          });
+        } catch (err) {
+          console.error(`Failed to parse document ${file.name}:`, err);
+        }
+      }
+
+      if (processedDocuments.length > 0) {
+        input.documentsData = processedDocuments;
+        await Report.findByIdAndUpdate(reportId, { documents: processedDocuments });
+      }
+    }
+
     const aiData = await generateDueDiligenceReport(input);
     
     await Report.findByIdAndUpdate(reportId, {
@@ -32,16 +69,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const {
-      companyName,
-      industry,
-      targetMarket,
-      analysisType,
-      businessDescription,
-      websiteUrl,
-      notes,
-    } = body;
+    const formData = await req.formData();
+    
+    const companyName = formData.get("companyName") as string;
+    const industry = formData.get("industry") as string;
+    const targetMarket = formData.get("targetMarket") as string;
+    const analysisType = formData.get("analysisType") as string;
+    const businessDescription = formData.get("businessDescription") as string;
+    const websiteUrl = formData.get("websiteUrl") as string;
+    const notes = formData.get("notes") as string;
+    
+    // Extract files
+    const documents = formData.getAll("documents");
+    const filesData = [];
+    
+    for (const doc of documents) {
+      if (doc instanceof File) {
+        const buffer = Buffer.from(await doc.arrayBuffer());
+        filesData.push({
+          name: doc.name,
+          type: doc.type,
+          buffer
+        });
+      }
+    }
 
     if (!companyName || !analysisType) {
       return NextResponse.json(
@@ -84,9 +135,9 @@ export async function POST(req: Request) {
     };
 
     // Fire and forget background process
-    processReportInBackground(report._id, aiInput);
+    processReportInBackground(String(report._id), aiInput, websiteUrl, filesData);
 
-    return NextResponse.json({ success: true, reportId: report._id });
+    return NextResponse.json({ success: true, reportId: String(report._id) });
   } catch (error) {
     console.error("Error creating report:", error);
     return NextResponse.json({ 

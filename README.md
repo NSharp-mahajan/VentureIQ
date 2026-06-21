@@ -53,6 +53,11 @@ Users simply provide a startup idea, business description, website URL, or pitch
 - 💵 **Revenue Opportunities**
 - 💡 **AI-Based Recommendations**
 
+### ✨ Key Capabilities
+
+- **Website Intelligence**: Automatically scrapes live websites to extract accurate, up-to-date marketing and technical data for due diligence.
+- **Document Intelligence**: Parses and analyzes uploaded PDF pitch decks, business plans, and financial reports, ensuring highly accurate context-aware analysis.
+
 *This allows users to make faster, sharper, and more informed decisions.*
 
 ---

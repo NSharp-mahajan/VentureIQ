@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -9,11 +9,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UploadCloud, Loader2 } from "lucide-react";
+import { UploadCloud, Loader2, X, FileText } from "lucide-react";
 
 export default function NewAnalysisPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
   const [formData, setFormData] = useState({
     companyName: "",
     websiteUrl: "",
@@ -34,6 +36,24 @@ export default function NewAnalysisPage() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const validFiles = newFiles.filter(f => f.type === "application/pdf" && f.size <= 20 * 1024 * 1024);
+      
+      if (validFiles.length !== newFiles.length) {
+        toast.error("Only PDF files under 20MB are allowed.");
+      }
+      
+      setFiles((prev) => [...prev, ...validFiles]);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
     if (!formData.companyName || !formData.analysisType) {
       toast.error("Company Name and Analysis Type are required.");
@@ -42,10 +62,18 @@ export default function NewAnalysisPage() {
 
     setLoading(true);
     try {
+      const submitData = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        submitData.append(key, value);
+      });
+      
+      files.forEach((file) => {
+        submitData.append("documents", file);
+      });
+
       const res = await fetch("/api/reports/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: submitData,
       });
 
       const data = await res.json();
@@ -124,11 +152,45 @@ export default function NewAnalysisPage() {
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Data Room / Document Upload</Label>
-              <div className="border-2 border-dashed border-border rounded-lg p-10 flex flex-col items-center justify-center text-center bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer opacity-70">
+              
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                className="hidden" 
+                accept="application/pdf" 
+                multiple 
+                disabled={loading}
+              />
+              
+              <div 
+                onClick={() => !loading && fileInputRef.current?.click()}
+                className={`border-2 border-dashed border-border rounded-lg p-10 flex flex-col items-center justify-center text-center bg-secondary/10 hover:bg-secondary/20 transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
                 <UploadCloud className="w-10 h-10 text-muted-foreground mb-4" />
                 <p className="font-medium">Click to upload or drag and drop</p>
-                <p className="text-sm text-muted-foreground mt-1">PDFs, Excel, Pitch Decks (Max 50MB) - Coming Soon</p>
+                <p className="text-sm text-muted-foreground mt-1">Only PDF files (Max 20MB each)</p>
               </div>
+
+              {files.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm font-medium">Uploaded Documents:</p>
+                  <div className="space-y-2">
+                    {files.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-secondary/20 rounded-md border border-border/50">
+                        <div className="flex items-center space-x-3 overflow-hidden">
+                          <FileText className="w-5 h-5 text-primary shrink-0" />
+                          <span className="text-sm truncate">{file.name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0" onClick={() => removeFile(idx)} disabled={loading}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="notes">Additional Notes</Label>

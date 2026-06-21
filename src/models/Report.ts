@@ -8,6 +8,16 @@ export interface IReportDocument extends Document {
   analysisType: string;
   businessDescription?: string;
   websiteUrl?: string;
+  documents?: {
+    fileName: string;
+    fileType: string;
+    extractedText: string;
+  }[];
+  scrapedData?: {
+    title: string;
+    description: string;
+    content: string;
+  };
   notes?: string;
   status: "completed" | "processing" | "failed";
   errorMessage?: string;
@@ -39,6 +49,18 @@ const ReportSchema = new Schema<IReportDocument>(
     analysisType: { type: String, required: true },
     businessDescription: { type: String },
     websiteUrl: { type: String },
+    documents: [
+      {
+        fileName: { type: String },
+        fileType: { type: String },
+        extractedText: { type: String },
+      },
+    ],
+    scrapedData: {
+      title: { type: String },
+      description: { type: String },
+      content: { type: String },
+    },
     notes: { type: String },
     status: { type: String, enum: ["completed", "processing", "failed"], default: "processing" },
     errorMessage: { type: String },
