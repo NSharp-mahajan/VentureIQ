@@ -75,8 +75,45 @@ You must return ONLY a raw, valid JSON object matching the exact structure below
   },
   "investmentScore": 85,
   "recommendation": "Final verdict on the business viability and investment potential...",
-  "keyInsights": ["Insight 1", "Insight 2", "Insight 3"]
+  "keyInsights": ["Insight 1", "Insight 2", "Insight 3"],
+  "competitorAnalysis": {
+    "topCompetitors": [
+      {
+        "name": "Competitor Name",
+        "reason": "Why they are a competitor",
+        "differentiation": "How this company differentiates from them"
+      }
+    ],
+    "summary": "Summary of competitive landscape"
+  },
+  "redFlags": [
+    {
+      "title": "Red flag title",
+      "severity": "low", 
+      "description": "Red flag description"
+    }
+  ],
+  "growthOpportunities": [
+    {
+      "title": "Opportunity title",
+      "description": "Opportunity description",
+      "timeframe": "short-term" 
+    }
+  ],
+  "scoreBreakdown": {
+    "marketOpportunity": 80,
+    "productStrength": 75,
+    "scalability": 90,
+    "competitiveMoat": 60,
+    "riskLevel": 70
+  },
+  "investmentVerdict": {
+    "label": "Strong Buy",
+    "summary": "Brief summary of the verdict"
+  }
 }
+
+Ensure that all numeric scores are integers from 0 to 100. For red flag severity use exactly "low", "medium", or "high". For timeframe use exactly "short-term", "mid-term", or "long-term". Be realistic and grounded in the provided context for your score breakdowns, competitors, red flags, and growth opportunities.
 `;
 
   const completion = await groq.chat.completions.create({

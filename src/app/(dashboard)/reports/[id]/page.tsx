@@ -6,10 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Share2, ArrowLeft, Loader2, BrainCircuit, AlertCircle, CheckCircle, TrendingUp, AlertTriangle, FileText } from "lucide-react";
+import { Share2, ArrowLeft, Loader2, BrainCircuit, AlertCircle, CheckCircle, TrendingUp, AlertTriangle, FileText, Swords, ShieldAlert, BarChart3, Target, Shield, Zap, Scale } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { IReport } from "@/types/report";
+import dynamic from "next/dynamic";
+
+const ExportPDFButton = dynamic(() => import("@/components/pdf/ExportPDFButton"), { ssr: false });
 
 export default function ReportPage() {
   const params = useParams();
@@ -136,7 +139,7 @@ export default function ReportPage() {
         </div>
         <div className="sm:ml-auto flex gap-2 w-full sm:w-auto">
           <Button variant="outline" className="flex-1 sm:flex-none"><Share2 className="w-4 h-4 mr-2" /> Share</Button>
-          <Button className="flex-1 sm:flex-none"><Download className="w-4 h-4 mr-2" /> Export</Button>
+          <ExportPDFButton report={report} />
         </div>
       </div>
 
@@ -169,7 +172,11 @@ export default function ReportPage() {
           <TabsTrigger value="documents">Document Intelligence</TabsTrigger>
           <TabsTrigger value="swot">SWOT Analysis</TabsTrigger>
           <TabsTrigger value="market">Market & Risks</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommendation</TabsTrigger>
+          <TabsTrigger value="competitors">Competitors</TabsTrigger>
+          <TabsTrigger value="risks">Red Flags</TabsTrigger>
+          <TabsTrigger value="growth">Growth</TabsTrigger>
+          <TabsTrigger value="scores">Scores</TabsTrigger>
+          <TabsTrigger value="recommendations">Verdict</TabsTrigger>
         </TabsList>
         
         <TabsContent value="executive">
@@ -341,14 +348,153 @@ export default function ReportPage() {
           </div>
         </TabsContent>
 
+        <TabsContent value="competitors">
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Swords className="w-5 h-5 text-primary" /> Competitor Analysis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {reportData?.competitorAnalysis ? (
+                <div className="space-y-6">
+                  <p className="text-sm text-muted-foreground">{reportData.competitorAnalysis.summary}</p>
+                  <div className="grid gap-4">
+                    {reportData.competitorAnalysis.topCompetitors.map((comp, idx) => (
+                      <div key={idx} className="border border-border/50 p-4 rounded-lg bg-secondary/10">
+                        <h4 className="font-semibold text-lg">{comp.name}</h4>
+                        <p className="text-sm text-muted-foreground mt-1"><span className="font-medium text-foreground">Why:</span> {comp.reason}</p>
+                        <p className="text-sm text-muted-foreground mt-1"><span className="font-medium text-foreground">Differentiation:</span> {comp.differentiation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Competitor analysis not available for this report.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="risks">
+          <Card className="border-border/50 shadow-sm border-t-4 border-t-destructive">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive"><ShieldAlert className="w-5 h-5" /> Red Flags & Risks</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {reportData?.redFlags && reportData.redFlags.length > 0 ? (
+                <div className="space-y-4">
+                  {reportData.redFlags.map((flag, idx) => (
+                    <div key={idx} className="flex gap-4 p-4 border border-border/50 rounded-lg">
+                      <div className="shrink-0 mt-1">
+                        {flag.severity === "high" && <AlertTriangle className="w-5 h-5 text-destructive" />}
+                        {flag.severity === "medium" && <AlertCircle className="w-5 h-5 text-amber-500" />}
+                        {flag.severity === "low" && <AlertCircle className="w-5 h-5 text-blue-500" />}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold">{flag.title}</h4>
+                          <Badge variant={flag.severity === "high" ? "destructive" : flag.severity === "medium" ? "secondary" : "outline"} className="text-[10px] uppercase tracking-wider">{flag.severity}</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{flag.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No major red flags identified.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="growth">
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><TrendingUp className="w-5 h-5 text-primary" /> Growth Opportunities</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {reportData?.growthOpportunities && reportData.growthOpportunities.length > 0 ? (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {reportData.growthOpportunities.map((opp, idx) => (
+                    <div key={idx} className="border border-border/50 p-4 rounded-lg bg-primary/5">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-semibold">{opp.title}</h4>
+                        <Badge variant="outline" className="bg-background text-xs capitalize">{opp.timeframe.replace('-', ' ')}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{opp.description}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No specific growth opportunities identified.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="scores">
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><BarChart3 className="w-5 h-5 text-primary" /> Multi-factor Score Breakdown</CardTitle>
+              <CardDescription>Detailed evaluation across 5 critical dimensions (0-100)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {reportData?.scoreBreakdown ? (
+                <div className="space-y-6 max-w-2xl">
+                  {[
+                    { label: "Market Opportunity", value: reportData.scoreBreakdown.marketOpportunity, icon: Target },
+                    { label: "Product Strength", value: reportData.scoreBreakdown.productStrength, icon: Zap },
+                    { label: "Scalability", value: reportData.scoreBreakdown.scalability, icon: TrendingUp },
+                    { label: "Competitive Moat", value: reportData.scoreBreakdown.competitiveMoat, icon: Shield },
+                    { label: "Risk Level", value: reportData.scoreBreakdown.riskLevel, icon: Scale },
+                  ].map((stat, idx) => (
+                    <div key={idx}>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                          <stat.icon className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium text-sm">{stat.label}</span>
+                        </div>
+                        <span className="font-bold text-sm">{stat.value}/100</span>
+                      </div>
+                      <div className="h-2 w-full bg-secondary/30 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full ${stat.value >= 80 ? 'bg-green-500' : stat.value >= 60 ? 'bg-blue-500' : stat.value >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} 
+                          style={{ width: `${stat.value}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Detailed score breakdown is not available for this report.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="recommendations">
           <Card className="border-border/50 shadow-sm bg-gradient-to-br from-card to-primary/5">
             <CardHeader>
-              <CardTitle>Final Recommendation</CardTitle>
-              <CardDescription>AI-generated investment verdict</CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Final Recommendation</CardTitle>
+                  <CardDescription>AI-generated investment verdict</CardDescription>
+                </div>
+                {reportData?.investmentVerdict && (
+                  <Badge className="text-base py-1 px-4 self-start sm:self-auto bg-primary text-primary-foreground">
+                    {reportData.investmentVerdict.label}
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
-            <CardContent className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap font-medium">
-              {reportData?.recommendation || "No recommendations available yet."}
+            <CardContent className="space-y-4">
+              {reportData?.investmentVerdict && (
+                <p className="text-lg font-medium">
+                  {reportData.investmentVerdict.summary}
+                </p>
+              )}
+              <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap font-medium">
+                {reportData?.recommendation || "No recommendations available yet."}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

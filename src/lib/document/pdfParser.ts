@@ -1,5 +1,20 @@
-// @ts-expect-error: pdf-parse types do not specify a default export
-import pdfParse from "pdf-parse";
+if (typeof global !== 'undefined') {
+  if (!global.DOMMatrix) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (global as any).DOMMatrix = class DOMMatrix {};
+  }
+  if (!global.Path2D) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (global as any).Path2D = class Path2D {};
+  }
+  if (!global.ImageData) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (global as any).ImageData = class ImageData {};
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParse = require("pdf-parse");
 
 export async function extractPdfText(buffer: Buffer): Promise<string> {
   try {
