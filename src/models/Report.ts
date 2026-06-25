@@ -65,6 +65,11 @@ export interface IReportDocument extends Document {
         summary: string;
       };
     };
+  verdict?: string;
+  isSaved?: boolean;
+  isArchived?: boolean;
+  deletedAt?: Date | null;
+  lastViewedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -143,6 +148,15 @@ const ReportSchema = new Schema<IReportDocument>(
           summary: { type: String },
         }
       },
+    verdict: { 
+      type: String, 
+      enum: ["STRONG_BUY", "BUY", "HOLD", "CAUTION", "AVOID", "UNKNOWN"], 
+      default: "UNKNOWN" 
+    },
+    isSaved: { type: Boolean, default: false },
+    isArchived: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null },
+    lastViewedAt: { type: Date },
   },
   {
     timestamps: true,

@@ -1,5 +1,7 @@
 export type ReportStatus = "completed" | "processing" | "failed";
 
+export type VerdictType = "STRONG_BUY" | "BUY" | "HOLD" | "CAUTION" | "AVOID" | "UNKNOWN";
+
 export interface ISwot {
   strengths: string[];
   weaknesses: string[];
@@ -84,6 +86,11 @@ export interface IReport {
   errorMessage?: string;
   aiScore?: number;
   reportData?: IReportData;
+  verdict?: VerdictType;
+  isSaved?: boolean;
+  isArchived?: boolean;
+  deletedAt?: Date | null;
+  lastViewedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

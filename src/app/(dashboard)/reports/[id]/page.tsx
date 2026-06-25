@@ -1,21 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Share2, ArrowLeft, Loader2, BrainCircuit, AlertCircle, CheckCircle, TrendingUp, AlertTriangle, FileText, Swords, ShieldAlert, BarChart3, Target, Shield, Zap, Scale } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Share2, ArrowLeft, Loader2, BrainCircuit, AlertCircle, CheckCircle, TrendingUp, AlertTriangle, FileText, Swords, ShieldAlert, BarChart3, Target, Shield, Zap, Scale, MoreVertical, Bookmark, BookmarkPlus, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { IReport } from "@/types/report";
+import { ScoreBreakdownChart } from "@/components/analytics/ScoreBreakdownChart";
+import { getVerdictBadgeClass, getVerdictLabel, VerdictType } from "@/lib/verdicts";
 import dynamic from "next/dynamic";
 
 const ExportPDFButton = dynamic(() => import("@/components/pdf/ExportPDFButton"), { ssr: false });
 
 export default function ReportPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   
   const [report, setReport] = useState<IReport | null>(null);
@@ -64,6 +68,47 @@ export default function ReportPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, report?.status]);
+
+  async function handleAction(action: string) {
+    if (!report) return;
+    try {
+      if (action === "delete") {
+        const confirmed = confirm("Are you sure you want to delete this report?");
+        if (!confirmed) return;
+      }
+
+      // Optimistic update
+      setReport(prev => {
+        if (!prev) return prev;
+        if (action === "save") return { ...prev, isSaved: true };
+        if (action === "unsave") return { ...prev, isSaved: false };
+        if (action === "archive") return { ...prev, isArchived: true };
+        if (action === "unarchive") return { ...prev, isArchived: false };
+        return prev;
+      });
+
+      const res = await fetch(`/api/reports/${report._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action })
+      });
+      const data = await res.json();
+      
+      if (!data.success) {
+        toast.error(data.error || "Action failed");
+        // We could revert optimistic update here, but a refresh might be safer
+      } else {
+        toast.success(`Report ${action}d successfully.`);
+        if (action === "delete") {
+          router.push("/reports");
+        } else {
+          setReport(data.report); // sync with DB
+        }
+      }
+    } catch (error) {
+      toast.error("An error occurred.");
+    }
+  }
 
   if (loading && !report) {
     return (
@@ -132,14 +177,43 @@ export default function ReportPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold font-heading">{report.companyName}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold font-heading">{report.companyName}</h1>
+            {report.verdict && (
+              <Badge className={`${getVerdictBadgeClass(report.verdict)} text-xs px-2 py-0.5 mt-1`} variant="outline">
+                {getVerdictLabel(report.verdict)}
+              </Badge>
+            )}
+            {report.isSaved && <Bookmark className="w-5 h-5 text-primary fill-primary mt-1" />}
+            {report.isArchived && <Archive className="w-5 h-5 text-muted-foreground mt-1" />}
+          </div>
           <p className="text-muted-foreground">
             Due Diligence Report • Generated on {new Date(report.createdAt).toLocaleDateString()}
           </p>
         </div>
-        <div className="sm:ml-auto flex gap-2 w-full sm:w-auto">
+        <div className="sm:ml-auto flex gap-2 w-full sm:w-auto items-center">
           <Button variant="outline" className="flex-1 sm:flex-none"><Share2 className="w-4 h-4 mr-2" /> Share</Button>
           <ExportPDFButton report={report} />
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger className={buttonVariants({ variant: "outline", size: "icon" })}>
+              <MoreVertical className="w-4 h-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleAction(report.isSaved ? "unsave" : "save")}>
+                {report.isSaved ? <Bookmark className="w-4 h-4 mr-2" /> : <BookmarkPlus className="w-4 h-4 mr-2" />}
+                {report.isSaved ? "Unsave Report" : "Save Report"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction(report.isArchived ? "unarchive" : "archive")}>
+                {report.isArchived ? <ArchiveRestore className="w-4 h-4 mr-2" /> : <Archive className="w-4 h-4 mr-2" />}
+                {report.isArchived ? "Unarchive Report" : "Archive Report"}
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleAction("delete")}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Report
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -153,7 +227,7 @@ export default function ReportPage() {
         <Card className="border-border/50 shadow-sm col-span-1 md:col-span-3">
           <CardContent className="p-4 flex items-center h-full">
             <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">{report.industry || "N/A"}</Badge>
+              <Badge variant="secondary">{report.industry || "Unknown Industry"}</Badge>
               <Badge variant="secondary">{report.analysisType}</Badge>
               {reportData?.keyInsights?.slice(0, 2).map((insight, i) => (
                 <Badge key={i} variant="outline" className="text-primary border-primary/20 bg-primary/5">
@@ -381,23 +455,43 @@ export default function ReportPage() {
             </CardHeader>
             <CardContent>
               {reportData?.redFlags && reportData.redFlags.length > 0 ? (
-                <div className="space-y-4">
-                  {reportData.redFlags.map((flag, idx) => (
-                    <div key={idx} className="flex gap-4 p-4 border border-border/50 rounded-lg">
-                      <div className="shrink-0 mt-1">
-                        {flag.severity === "high" && <AlertTriangle className="w-5 h-5 text-destructive" />}
-                        {flag.severity === "medium" && <AlertCircle className="w-5 h-5 text-amber-500" />}
-                        {flag.severity === "low" && <AlertCircle className="w-5 h-5 text-blue-500" />}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold">{flag.title}</h4>
-                          <Badge variant={flag.severity === "high" ? "destructive" : flag.severity === "medium" ? "secondary" : "outline"} className="text-[10px] uppercase tracking-wider">{flag.severity}</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{flag.description}</p>
-                      </div>
+                <div className="space-y-6">
+                  <div className="flex flex-wrap gap-8 p-4 bg-secondary/10 rounded-lg border border-border/50">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Total Flags</p>
+                      <p className="text-2xl font-bold">{reportData.redFlags.length}</p>
                     </div>
-                  ))}
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">High Severity</p>
+                      <p className="text-xl font-bold text-destructive">{reportData.redFlags.filter(f => f.severity === 'high').length}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Medium Severity</p>
+                      <p className="text-xl font-bold text-amber-500">{reportData.redFlags.filter(f => f.severity === 'medium').length}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Low Severity</p>
+                      <p className="text-xl font-bold text-blue-500">{reportData.redFlags.filter(f => f.severity === 'low').length}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {reportData.redFlags.map((flag, idx) => (
+                      <div key={idx} className="flex gap-4 p-4 border border-border/50 rounded-lg">
+                        <div className="shrink-0 mt-1">
+                          {flag.severity === "high" && <AlertTriangle className="w-5 h-5 text-destructive" />}
+                          {flag.severity === "medium" && <AlertCircle className="w-5 h-5 text-amber-500" />}
+                          {flag.severity === "low" && <AlertCircle className="w-5 h-5 text-blue-500" />}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold">{flag.title}</h4>
+                            <Badge variant={flag.severity === "high" ? "destructive" : flag.severity === "medium" ? "secondary" : "outline"} className="text-[10px] uppercase tracking-wider">{flag.severity}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{flag.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No major red flags identified.</p>
@@ -413,16 +507,24 @@ export default function ReportPage() {
             </CardHeader>
             <CardContent>
               {reportData?.growthOpportunities && reportData.growthOpportunities.length > 0 ? (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {reportData.growthOpportunities.map((opp, idx) => (
-                    <div key={idx} className="border border-border/50 p-4 rounded-lg bg-primary/5">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-semibold">{opp.title}</h4>
-                        <Badge variant="outline" className="bg-background text-xs capitalize">{opp.timeframe.replace('-', ' ')}</Badge>
+                <div className="space-y-6">
+                  {["short-term", "mid-term", "long-term"].map((timeframe) => {
+                    const opps = reportData.growthOpportunities!.filter(o => o.timeframe === timeframe);
+                    if (opps.length === 0) return null;
+                    return (
+                      <div key={timeframe}>
+                        <h3 className="font-bold text-lg capitalize mb-3 pb-2 border-b border-border/50 text-foreground/80">{timeframe.replace('-', ' ')}</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                           {opps.map((opp, idx) => (
+                            <div key={idx} className="border border-border/50 p-4 rounded-lg bg-primary/5">
+                              <h4 className="font-semibold mb-2">{opp.title}</h4>
+                              <p className="text-sm text-muted-foreground">{opp.description}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">{opp.description}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No specific growth opportunities identified.</p>
@@ -439,30 +541,35 @@ export default function ReportPage() {
             </CardHeader>
             <CardContent>
               {reportData?.scoreBreakdown ? (
-                <div className="space-y-6 max-w-2xl">
-                  {[
-                    { label: "Market Opportunity", value: reportData.scoreBreakdown.marketOpportunity, icon: Target },
-                    { label: "Product Strength", value: reportData.scoreBreakdown.productStrength, icon: Zap },
-                    { label: "Scalability", value: reportData.scoreBreakdown.scalability, icon: TrendingUp },
-                    { label: "Competitive Moat", value: reportData.scoreBreakdown.competitiveMoat, icon: Shield },
-                    { label: "Risk Level", value: reportData.scoreBreakdown.riskLevel, icon: Scale },
-                  ].map((stat, idx) => (
-                    <div key={idx}>
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-2">
-                          <stat.icon className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium text-sm">{stat.label}</span>
+                <div className="grid lg:grid-cols-2 gap-8 items-center">
+                  <div className="space-y-6">
+                    {[
+                      { label: "Market Opportunity", value: reportData.scoreBreakdown.marketOpportunity, icon: Target },
+                      { label: "Product Strength", value: reportData.scoreBreakdown.productStrength, icon: Zap },
+                      { label: "Scalability", value: reportData.scoreBreakdown.scalability, icon: TrendingUp },
+                      { label: "Competitive Moat", value: reportData.scoreBreakdown.competitiveMoat, icon: Shield },
+                      { label: "Risk Level", value: reportData.scoreBreakdown.riskLevel, icon: Scale },
+                    ].map((stat, idx) => (
+                      <div key={idx}>
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="flex items-center gap-2">
+                            <stat.icon className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium text-sm">{stat.label}</span>
+                          </div>
+                          <span className="font-bold text-sm">{stat.value}/100</span>
                         </div>
-                        <span className="font-bold text-sm">{stat.value}/100</span>
+                        <div className="h-2 w-full bg-secondary/30 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full ${stat.value >= 80 ? 'bg-green-500' : stat.value >= 60 ? 'bg-blue-500' : stat.value >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} 
+                            style={{ width: `${stat.value}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-2 w-full bg-secondary/30 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full ${stat.value >= 80 ? 'bg-green-500' : stat.value >= 60 ? 'bg-blue-500' : stat.value >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} 
-                          style={{ width: `${stat.value}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  <div className="hidden lg:block w-full">
+                    <ScoreBreakdownChart scoreBreakdown={reportData.scoreBreakdown} />
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">Detailed score breakdown is not available for this report.</p>
@@ -479,11 +586,15 @@ export default function ReportPage() {
                   <CardTitle>Final Recommendation</CardTitle>
                   <CardDescription>AI-generated investment verdict</CardDescription>
                 </div>
-                {reportData?.investmentVerdict && (
+                {report.verdict && report.verdict !== "UNKNOWN" ? (
+                  <Badge className={`${getVerdictBadgeClass(report.verdict)} text-base py-1 px-4 self-start sm:self-auto`}>
+                    {getVerdictLabel(report.verdict)}
+                  </Badge>
+                ) : reportData?.investmentVerdict ? (
                   <Badge className="text-base py-1 px-4 self-start sm:self-auto bg-primary text-primary-foreground">
                     {reportData.investmentVerdict.label}
                   </Badge>
-                )}
+                ) : null}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">

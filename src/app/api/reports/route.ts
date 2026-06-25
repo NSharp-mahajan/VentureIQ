@@ -13,7 +13,10 @@ export async function GET() {
 
     await connectDB();
 
-    const reports = await Report.find({ userId: user.id })
+    const reports = await Report.find({ 
+      userId: user.id,
+      deletedAt: null 
+    })
       .sort({ createdAt: -1 })
       .lean();
 

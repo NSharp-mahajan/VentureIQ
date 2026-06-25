@@ -46,10 +46,15 @@ async function processReportInBackground(
 
     const aiData = await generateDueDiligenceReport(input);
     
+    // Dynamically import the map text function to determine the verdict enum
+    const { mapTextToVerdictType } = await import("@/lib/verdicts");
+    const verdictEnum = mapTextToVerdictType(aiData.investmentVerdict?.label);
+    
     await Report.findByIdAndUpdate(reportId, {
       status: "completed",
       reportData: aiData,
       aiScore: aiData.investmentScore || 0,
+      verdict: verdictEnum,
     });
   } catch (error) {
     console.error("Groq generation failed:", error);
