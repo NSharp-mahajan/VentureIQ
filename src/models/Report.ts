@@ -54,17 +54,52 @@ export interface IReportDocument extends Document {
         timeframe: string;
       }[];
       scoreBreakdown?: {
-        marketOpportunity: number;
-        productStrength: number;
-        scalability: number;
-        competitiveMoat: number;
-        riskLevel: number;
+        marketOpportunity: number | { score: number, reason: string };
+        productStrength: number | { score: number, reason: string };
+        scalability: number | { score: number, reason: string };
+        competitiveMoat: number | { score: number, reason: string };
+        riskLevel: number | { score: number, reason: string };
       };
       investmentVerdict?: {
         label: string;
         summary: string;
+        reasoning?: string;
+        strengths?: string[];
+        weaknesses?: string[];
+        assumptions?: string[];
+      };
+      dataQuality?: {
+        websiteAnalyzed: boolean;
+        documentsAnalyzed: number;
+        completeness: string;
+        missingInfo: string[];
+        estimatedReliability: number;
+      };
+      sectionConfidence?: {
+        executiveSummary: number;
+        marketAnalysis: number;
+        riskAssessment: number;
+        competitorAnalysis: number;
+        financialHealth: number;
+      };
+      sourceAttribution?: {
+        executiveSummary?: string[];
+        marketAnalysis?: string[];
+        riskAssessment?: string[];
+        keyInsights?: string[];
+        swot?: string[];
+        competitorAnalysis?: string[];
+        growthOpportunities?: string[];
+        redFlags?: string[];
       };
     };
+  aiMetadata?: {
+    modelUsed: string;
+    generationTimestamp: Date;
+    processingDurationMs: number;
+    promptVersion: string;
+    overallConfidenceScore: number;
+  };
   verdict?: string;
   isSaved?: boolean;
   isArchived?: boolean;
@@ -137,17 +172,43 @@ const ReportSchema = new Schema<IReportDocument>(
           }
         ],
         scoreBreakdown: {
-          marketOpportunity: { type: Number },
-          productStrength: { type: Number },
-          scalability: { type: Number },
-          competitiveMoat: { type: Number },
-          riskLevel: { type: Number },
+          marketOpportunity: { type: Schema.Types.Mixed },
+          productStrength: { type: Schema.Types.Mixed },
+          scalability: { type: Schema.Types.Mixed },
+          competitiveMoat: { type: Schema.Types.Mixed },
+          riskLevel: { type: Schema.Types.Mixed },
         },
         investmentVerdict: {
           label: { type: String },
           summary: { type: String },
-        }
+          reasoning: { type: String },
+          strengths: [{ type: String }],
+          weaknesses: [{ type: String }],
+          assumptions: [{ type: String }],
+        },
+        dataQuality: {
+          websiteAnalyzed: { type: Boolean },
+          documentsAnalyzed: { type: Number },
+          completeness: { type: String },
+          missingInfo: [{ type: String }],
+          estimatedReliability: { type: Number },
+        },
+        sectionConfidence: {
+          executiveSummary: { type: Number },
+          marketAnalysis: { type: Number },
+          riskAssessment: { type: Number },
+          competitorAnalysis: { type: Number },
+          financialHealth: { type: Number },
+        },
+        sourceAttribution: { type: Schema.Types.Mixed },
       },
+    aiMetadata: {
+      modelUsed: { type: String },
+      generationTimestamp: { type: Date },
+      processingDurationMs: { type: Number },
+      promptVersion: { type: String },
+      overallConfidenceScore: { type: Number },
+    },
     verdict: { 
       type: String, 
       enum: ["STRONG_BUY", "BUY", "HOLD", "CAUTION", "AVOID", "UNKNOWN"], 

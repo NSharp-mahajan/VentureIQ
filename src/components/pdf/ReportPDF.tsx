@@ -217,7 +217,7 @@ export const ReportPDF = ({ report }: ReportPDFProps) => {
                 ].map((stat, i) => (
                   <View key={i} style={{ width: '50%', marginBottom: 12 }}>
                     <Text style={{ fontSize: 11, color: '#666666', marginBottom: 2 }}>{stat.label}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: 700 }}>{stat.value}/100</Text>
+                    <Text style={{ fontSize: 14, fontWeight: 700 }}>{typeof stat.value === 'number' ? stat.value : (stat.value as any)?.score || 0}/100</Text>
                   </View>
                 ))}
               </View>

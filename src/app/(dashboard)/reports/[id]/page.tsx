@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { IReport } from "@/types/report";
 import { ScoreBreakdownChart } from "@/components/analytics/ScoreBreakdownChart";
 import { getVerdictBadgeClass, getVerdictLabel, VerdictType } from "@/lib/verdicts";
+import { ReportActionMenu, ReportActionType } from "@/components/common/ReportActionMenu";
+import { AnimatedCounter } from "@/components/common/AnimatedCounter";
 import dynamic from "next/dynamic";
 
 const ExportPDFButton = dynamic(() => import("@/components/pdf/ExportPDFButton"), { ssr: false });
@@ -69,7 +71,7 @@ export default function ReportPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, report?.status]);
 
-  async function handleAction(action: string) {
+  async function handleAction(action: ReportActionType) {
     if (!report) return;
     try {
       if (action === "delete") {
@@ -195,49 +197,111 @@ export default function ReportPage() {
           <Button variant="outline" className="flex-1 sm:flex-none"><Share2 className="w-4 h-4 mr-2" /> Share</Button>
           <ExportPDFButton report={report} />
           
-          <DropdownMenu>
-            <DropdownMenuTrigger className={buttonVariants({ variant: "outline", size: "icon" })}>
-              <MoreVertical className="w-4 h-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleAction(report.isSaved ? "unsave" : "save")}>
-                {report.isSaved ? <Bookmark className="w-4 h-4 mr-2" /> : <BookmarkPlus className="w-4 h-4 mr-2" />}
-                {report.isSaved ? "Unsave Report" : "Save Report"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAction(report.isArchived ? "unarchive" : "archive")}>
-                {report.isArchived ? <ArchiveRestore className="w-4 h-4 mr-2" /> : <Archive className="w-4 h-4 mr-2" />}
-                {report.isArchived ? "Unarchive Report" : "Archive Report"}
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleAction("delete")}>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Report
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ReportActionMenu 
+            isSaved={!!report.isSaved}
+            isArchived={!!report.isArchived}
+            onAction={(action) => handleAction(action)}
+            triggerVariant="outline"
+            triggerSize="icon"
+            triggerIcon={<MoreVertical className="w-4 h-4" />}
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card className="border-border/50 shadow-sm">
-          <CardContent className="p-4 flex flex-col justify-center items-center text-center">
-            <div className="text-sm font-medium text-muted-foreground mb-1">Investment Score</div>
-            <div className="text-3xl font-bold text-primary">{reportData?.investmentScore || report.aiScore || 0}/100</div>
+        <Card className="border-border/50 shadow-sm relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+          <CardContent className="p-6 flex flex-col justify-center items-center text-center relative z-10 h-full">
+            <div className="text-sm font-medium text-muted-foreground mb-3 font-heading uppercase tracking-wider">Investment Score</div>
+            <div className="relative flex items-center justify-center w-24 h-24">
+              <svg className="w-full h-full transform -rotate-90 drop-shadow-sm" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8" className="text-secondary" />
+                <circle 
+                  cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8" 
+                  strokeDasharray={`${2 * Math.PI * 42}`} 
+                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - (reportData?.investmentScore || report.aiScore || 0) / 100)}`}
+                  className="text-primary transition-all duration-1000 ease-out" 
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center flex-col">
+                <span className="text-2xl font-bold text-foreground">
+                  <AnimatedCounter value={reportData?.investmentScore || report.aiScore || 0} />
+                </span>
+              </div>
+            </div>
           </CardContent>
         </Card>
         <Card className="border-border/50 shadow-sm col-span-1 md:col-span-3">
-          <CardContent className="p-4 flex items-center h-full">
+          <CardContent className="p-6 flex items-center h-full">
             <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">{report.industry || "Unknown Industry"}</Badge>
-              <Badge variant="secondary">{report.analysisType}</Badge>
+              <Badge variant="secondary" className="px-3 py-1 text-sm">{report.industry || "Unknown Industry"}</Badge>
+              <Badge variant="secondary" className="px-3 py-1 text-sm">{report.analysisType}</Badge>
               {reportData?.keyInsights?.slice(0, 2).map((insight, i) => (
-                <Badge key={i} variant="outline" className="text-primary border-primary/20 bg-primary/5">
-                  Insight: {insight.substring(0, 40)}...
+                <Badge key={i} variant="outline" className="text-primary border-primary/20 bg-primary/5 px-3 py-1 text-sm font-normal">
+                  💡 {insight.substring(0, 50)}...
                 </Badge>
               ))}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Metadata & Data Quality Panel */}
+      {report.aiMetadata && reportData?.dataQuality && (
+        <Card className="border-border/50 shadow-sm mb-6 bg-secondary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <BrainCircuit className="w-4 h-4 text-primary" /> AI Data Quality & Confidence
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground mb-1 text-xs uppercase tracking-wider">Overall Confidence</p>
+                <p className="font-bold flex items-center gap-1">
+                  {report.aiMetadata.overallConfidenceScore}%
+                  {report.aiMetadata.overallConfidenceScore >= 80 ? (
+                    <CheckCircle className="w-3 h-3 text-green-500" />
+                  ) : report.aiMetadata.overallConfidenceScore >= 50 ? (
+                    <AlertCircle className="w-3 h-3 text-amber-500" />
+                  ) : (
+                    <AlertTriangle className="w-3 h-3 text-red-500" />
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-1 text-xs uppercase tracking-wider">Completeness</p>
+                <p className="font-semibold capitalize">{reportData.dataQuality.completeness}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-1 text-xs uppercase tracking-wider">Sources Analyzed</p>
+                <p className="font-semibold">
+                  {reportData.dataQuality.websiteAnalyzed ? "Website, " : ""}
+                  {reportData.dataQuality.documentsAnalyzed} Document(s)
+                </p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-muted-foreground mb-1 text-xs uppercase tracking-wider">AI Generation</p>
+                <p className="font-medium text-xs">
+                  Model: {report.aiMetadata.modelUsed} <br />
+                  Time: {(report.aiMetadata.processingDurationMs / 1000).toFixed(1)}s
+                </p>
+              </div>
+            </div>
+            {reportData.dataQuality.missingInfo && reportData.dataQuality.missingInfo.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border/30">
+                <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Missing Information (Lowered Confidence)</p>
+                <div className="flex flex-wrap gap-2">
+                  {reportData.dataQuality.missingInfo.map((info, idx) => (
+                    <Badge key={idx} variant="outline" className="text-[10px] text-muted-foreground">{info}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="executive" className="w-full">
         <TabsList className="mb-4 bg-secondary/20 flex-wrap h-auto p-1">
@@ -256,16 +320,25 @@ export default function ReportPage() {
         <TabsContent value="executive">
           <div className="grid md:grid-cols-3 gap-6">
             <Card className="border-border/50 shadow-sm md:col-span-2">
-              <CardHeader><CardTitle>Executive Summary</CardTitle></CardHeader>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Executive Summary</CardTitle>
+                  {reportData?.sourceAttribution?.executiveSummary && (
+                    <Badge variant="outline" className="text-xs bg-secondary/20">Sources: {reportData.sourceAttribution.executiveSummary.join(", ")}</Badge>
+                  )}
+                </div>
+              </CardHeader>
               <CardContent className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap">
                 {reportData?.executiveSummary || "No executive summary available yet."}
               </CardContent>
             </Card>
             <Card className="border-border/50 shadow-sm bg-primary/5">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-primary" /> Key Insights
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-primary" /> Key Insights
+                  </CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-4">
@@ -408,13 +481,27 @@ export default function ReportPage() {
         <TabsContent value="market">
           <div className="grid md:grid-cols-2 gap-6">
             <Card className="border-border/50 shadow-sm">
-              <CardHeader><CardTitle>Market Analysis</CardTitle></CardHeader>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Market Analysis</CardTitle>
+                  {reportData?.sourceAttribution?.marketAnalysis && (
+                    <Badge variant="outline" className="text-xs bg-secondary/20">Sources: {reportData.sourceAttribution.marketAnalysis.join(", ")}</Badge>
+                  )}
+                </div>
+              </CardHeader>
               <CardContent className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap">
                 {reportData?.marketAnalysis || "No market analysis available yet."}
               </CardContent>
             </Card>
             <Card className="border-border/50 shadow-sm">
-              <CardHeader><CardTitle>Risk Assessment</CardTitle></CardHeader>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Risk Assessment</CardTitle>
+                  {reportData?.sourceAttribution?.riskAssessment && (
+                    <Badge variant="outline" className="text-xs bg-secondary/20">Sources: {reportData.sourceAttribution.riskAssessment.join(", ")}</Badge>
+                  )}
+                </div>
+              </CardHeader>
               <CardContent className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap text-destructive/90">
                 {reportData?.riskAssessment || "No risk assessment available yet."}
               </CardContent>
@@ -544,28 +631,33 @@ export default function ReportPage() {
                 <div className="grid lg:grid-cols-2 gap-8 items-center">
                   <div className="space-y-6">
                     {[
-                      { label: "Market Opportunity", value: reportData.scoreBreakdown.marketOpportunity, icon: Target },
-                      { label: "Product Strength", value: reportData.scoreBreakdown.productStrength, icon: Zap },
-                      { label: "Scalability", value: reportData.scoreBreakdown.scalability, icon: TrendingUp },
-                      { label: "Competitive Moat", value: reportData.scoreBreakdown.competitiveMoat, icon: Shield },
-                      { label: "Risk Level", value: reportData.scoreBreakdown.riskLevel, icon: Scale },
-                    ].map((stat, idx) => (
-                      <div key={idx}>
-                        <div className="flex justify-between items-center mb-2">
-                          <div className="flex items-center gap-2">
-                            <stat.icon className="w-4 h-4 text-muted-foreground" />
-                            <span className="font-medium text-sm">{stat.label}</span>
+                      { label: "Market Opportunity", data: reportData.scoreBreakdown.marketOpportunity, icon: Target },
+                      { label: "Product Strength", data: reportData.scoreBreakdown.productStrength, icon: Zap },
+                      { label: "Scalability", data: reportData.scoreBreakdown.scalability, icon: TrendingUp },
+                      { label: "Competitive Moat", data: reportData.scoreBreakdown.competitiveMoat, icon: Shield },
+                      { label: "Risk Level", data: reportData.scoreBreakdown.riskLevel, icon: Scale },
+                    ].map((stat, idx) => {
+                      const value = typeof stat.data === 'number' ? stat.data : stat.data?.score || 0;
+                      const reason = typeof stat.data === 'object' ? stat.data.reason : null;
+                      return (
+                        <div key={idx}>
+                          <div className="flex justify-between items-center mb-1">
+                            <div className="flex items-center gap-2">
+                              <stat.icon className="w-4 h-4 text-muted-foreground" />
+                              <span className="font-medium text-sm">{stat.label}</span>
+                            </div>
+                            <span className="font-bold text-sm">{value}/100</span>
                           </div>
-                          <span className="font-bold text-sm">{stat.value}/100</span>
+                          <div className="h-2 w-full bg-secondary/30 rounded-full overflow-hidden mb-1">
+                            <div 
+                              className={`h-full rounded-full ${value >= 80 ? 'bg-green-500' : value >= 60 ? 'bg-blue-500' : value >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} 
+                              style={{ width: `${value}%` }}
+                            />
+                          </div>
+                          {reason && <p className="text-xs text-muted-foreground leading-snug">{reason}</p>}
                         </div>
-                        <div className="h-2 w-full bg-secondary/30 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full ${stat.value >= 80 ? 'bg-green-500' : stat.value >= 60 ? 'bg-blue-500' : stat.value >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} 
-                            style={{ width: `${stat.value}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <div className="hidden lg:block w-full">
                     <ScoreBreakdownChart scoreBreakdown={reportData.scoreBreakdown} />
@@ -597,14 +689,60 @@ export default function ReportPage() {
                 ) : null}
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               {reportData?.investmentVerdict && (
-                <p className="text-lg font-medium">
-                  {reportData.investmentVerdict.summary}
-                </p>
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-2 text-primary">The Verdict</h3>
+                  <p className="text-foreground font-medium">{reportData.investmentVerdict.summary}</p>
+                </div>
               )}
-              <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap font-medium">
-                {reportData?.recommendation || "No recommendations available yet."}
+              
+              {reportData?.investmentVerdict?.reasoning && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2"><BrainCircuit className="w-4 h-4 text-muted-foreground" /> AI Reasoning</h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{reportData.investmentVerdict.reasoning}</p>
+                </div>
+              )}
+
+              {((reportData?.investmentVerdict?.strengths?.length ?? 0) > 0 || (reportData?.investmentVerdict?.weaknesses?.length ?? 0) > 0) && (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {reportData?.investmentVerdict?.strengths && reportData.investmentVerdict.strengths.length > 0 && (
+                    <div className="border border-green-500/20 bg-green-500/5 p-4 rounded-lg">
+                      <h4 className="font-semibold text-sm text-green-600 mb-2">Key Drivers (Strengths)</h4>
+                      <ul className="space-y-1">
+                        {reportData.investmentVerdict.strengths.map((s, i) => (
+                          <li key={i} className="text-xs flex gap-2"><CheckCircle className="w-3 h-3 text-green-500 shrink-0 mt-0.5" /> <span>{s}</span></li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {reportData?.investmentVerdict?.weaknesses && reportData.investmentVerdict.weaknesses.length > 0 && (
+                    <div className="border border-amber-500/20 bg-amber-500/5 p-4 rounded-lg">
+                      <h4 className="font-semibold text-sm text-amber-600 mb-2">Key Concerns (Weaknesses)</h4>
+                      <ul className="space-y-1">
+                        {reportData.investmentVerdict.weaknesses.map((w, i) => (
+                          <li key={i} className="text-xs flex gap-2"><AlertTriangle className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" /> <span>{w}</span></li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {reportData?.investmentVerdict?.assumptions && reportData.investmentVerdict.assumptions.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2 text-sm text-muted-foreground">Assumptions Made During Analysis</h4>
+                  <ul className="list-disc pl-5 space-y-1 text-xs text-muted-foreground">
+                    {reportData.investmentVerdict.assumptions.map((a, i) => <li key={i}>{a}</li>)}
+                  </ul>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-border/50">
+                <h4 className="font-semibold mb-3">Detailed Recommendations</h4>
+                <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap font-medium">
+                  {reportData?.recommendation || "No recommendations available yet."}
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -13,6 +13,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { IReport } from "@/types/report";
 import { getVerdictBadgeClass, getVerdictLabel } from "@/lib/verdicts";
+import { ReportActionMenu, ReportActionType } from "@/components/common/ReportActionMenu";
+import { EmptyState } from "@/components/common/EmptyState";
 
 export default function ReportsPage() {
   const [reports, setReports] = useState<IReport[]>([]);
@@ -22,6 +24,8 @@ export default function ReportsPage() {
   const [sortBy, setSortBy] = useState("newest");
   const [filterVerdict, setFilterVerdict] = useState("all");
   const [viewFilter, setViewFilter] = useState("active");
+  const [filterScore, setFilterScore] = useState("all");
+  const [filterDate, setFilterDate] = useState("all");
 
   useEffect(() => {
     async function fetchReports() {
@@ -42,7 +46,7 @@ export default function ReportsPage() {
     fetchReports();
   }, []);
 
-  async function handleAction(reportId: string, action: string) {
+  async function handleAction(reportId: string, action: ReportActionType) {
     try {
       // Optimistic update
       setReports(prev => prev.map(r => {
@@ -130,8 +134,31 @@ export default function ReportsPage() {
       return 0;
     });
 
+    // 5. Score Filter
+    if (filterScore !== "all") {
+      result = result.filter(r => {
+        const score = r.aiScore || r.reportData?.investmentScore || 0;
+        if (filterScore === "high") return score >= 80;
+        if (filterScore === "medium") return score >= 50 && score < 80;
+        if (filterScore === "low") return score < 50;
+        return true;
+      });
+    }
+
+    // 6. Date Filter
+    if (filterDate !== "all") {
+      const now = new Date();
+      result = result.filter(r => {
+        const d = new Date(r.createdAt);
+        if (filterDate === "today") return d.toDateString() === now.toDateString();
+        if (filterDate === "week") return now.getTime() - d.getTime() <= 7 * 24 * 60 * 60 * 1000;
+        if (filterDate === "month") return now.getTime() - d.getTime() <= 30 * 24 * 60 * 60 * 1000;
+        return true;
+      });
+    }
+
     return result;
-  }, [visibleReports, searchQuery, filterVerdict, sortBy, viewFilter]);
+  }, [visibleReports, searchQuery, filterVerdict, sortBy, viewFilter, filterScore, filterDate]);
 
   return (
     <div className="space-y-6">
@@ -221,6 +248,30 @@ export default function ReportsPage() {
             </SelectContent>
           </Select>
           
+          <Select value={filterScore} onValueChange={(value) => setFilterScore(value || "all")}>
+            <SelectTrigger className="w-full sm:w-[130px]">
+              <SelectValue placeholder="Score" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any Score</SelectItem>
+              <SelectItem value="high">High (80+)</SelectItem>
+              <SelectItem value="medium">Medium (50-79)</SelectItem>
+              <SelectItem value="low">Low (&lt;50)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filterDate} onValueChange={(value) => setFilterDate(value || "all")}>
+            <SelectTrigger className="w-full sm:w-[130px]">
+              <SelectValue placeholder="Date" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any Time</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">Past Week</SelectItem>
+              <SelectItem value="month">Past Month</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Select value={sortBy} onValueChange={(value) => setSortBy(value || "newest")}>
             <SelectTrigger className="w-full sm:w-[150px]">
               <SelectValue placeholder="Sort by" />
@@ -256,8 +307,13 @@ export default function ReportsPage() {
               </TableRow>
             ) : filteredAndSortedReports.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                  No reports match your filters.
+                <TableCell colSpan={7} className="h-48 text-center p-4">
+                  <EmptyState 
+                    icon={<Search className="w-8 h-8" />}
+                    title="No results found"
+                    description="We couldn't find any reports matching your filters."
+                    className="border-none bg-transparent shadow-none"
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -296,25 +352,11 @@ export default function ReportsPage() {
                       <Link href={`/reports/${report._id}`}>
                         <Button variant="ghost" size="sm">View</Button>
                       </Link>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className={buttonVariants({ variant: "ghost", size: "sm", className: "w-8 h-8 p-0" })}>
-                          <MoreHorizontal className="w-4 h-4" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleAction(report._id, report.isSaved ? "unsave" : "save")}>
-                            {report.isSaved ? <Bookmark className="w-4 h-4 mr-2" /> : <BookmarkPlus className="w-4 h-4 mr-2" />}
-                            {report.isSaved ? "Unsave" : "Save"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleAction(report._id, report.isArchived ? "unarchive" : "archive")}>
-                            {report.isArchived ? <ArchiveRestore className="w-4 h-4 mr-2" /> : <Archive className="w-4 h-4 mr-2" />}
-                            {report.isArchived ? "Unarchive" : "Archive"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleAction(report._id, "delete")}>
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <ReportActionMenu 
+                        isSaved={!!report.isSaved}
+                        isArchived={!!report.isArchived}
+                        onAction={(action) => handleAction(report._id as string, action)}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>

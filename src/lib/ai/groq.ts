@@ -101,19 +101,47 @@ You must return ONLY a raw, valid JSON object matching the exact structure below
     }
   ],
   "scoreBreakdown": {
-    "marketOpportunity": 80,
-    "productStrength": 75,
-    "scalability": 90,
-    "competitiveMoat": 60,
-    "riskLevel": 70
+    "marketOpportunity": { "score": 80, "reason": "Explanation of score" },
+    "productStrength": { "score": 75, "reason": "Explanation of score" },
+    "scalability": { "score": 90, "reason": "Explanation of score" },
+    "competitiveMoat": { "score": 60, "reason": "Explanation of score" },
+    "riskLevel": { "score": 70, "reason": "Explanation of score" }
   },
   "investmentVerdict": {
-    "label": "Strong Buy",
-    "summary": "Brief summary of the verdict"
+    "label": "STRONG_BUY",
+    "summary": "Brief summary of the verdict",
+    "reasoning": "Detailed explanation of why this verdict was chosen.",
+    "strengths": ["Major strength contributing to verdict"],
+    "weaknesses": ["Major weakness contributing to verdict"],
+    "assumptions": ["Assumptions made by AI in reaching this verdict"]
+  },
+  "dataQuality": {
+    "websiteAnalyzed": true,
+    "documentsAnalyzed": 1,
+    "completeness": "high",
+    "missingInfo": ["List of missing information like 'Financials' or 'Team'"],
+    "estimatedReliability": 85
+  },
+  "sectionConfidence": {
+    "executiveSummary": 90,
+    "marketAnalysis": 85,
+    "riskAssessment": 80,
+    "competitorAnalysis": 75,
+    "financialHealth": 0
+  },
+  "sourceAttribution": {
+    "executiveSummary": ["Website", "AI Inference"],
+    "marketAnalysis": ["Uploaded Documents", "AI Inference"],
+    "riskAssessment": ["AI Inference", "User Input"],
+    "keyInsights": ["Website", "Uploaded Documents"],
+    "swot": ["AI Inference"],
+    "competitorAnalysis": ["Website", "AI Inference"],
+    "growthOpportunities": ["AI Inference"],
+    "redFlags": ["Uploaded Documents", "AI Inference"]
   }
 }
 
-Ensure that all numeric scores are integers from 0 to 100. For red flag severity use exactly "low", "medium", or "high". For timeframe use exactly "short-term", "mid-term", or "long-term". Be realistic and grounded in the provided context for your score breakdowns, competitors, red flags, and growth opportunities.
+Ensure that all numeric scores are integers from 0 to 100. For red flag severity use exactly "low", "medium", or "high". For timeframe use exactly "short-term", "mid-term", or "long-term". For dataQuality completeness use exactly "low", "medium", or "high". Be realistic and grounded in the provided context for your score breakdowns, competitors, red flags, and growth opportunities. Ensure sourceAttribution accurately reflects where the data originated (Website, Uploaded Documents, User Input, or AI Inference).
 `;
 
   const completion = await groq.chat.completions.create({

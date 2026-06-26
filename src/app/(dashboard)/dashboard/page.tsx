@@ -4,11 +4,13 @@ import Report from "@/models/Report";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, BarChart3, TrendingUp, ArrowRight, Target } from "lucide-react";
+import { Plus, FileText, BarChart3, TrendingUp, ArrowRight, Target, Bookmark, Archive, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { VerdictDistributionChart } from "@/components/analytics/VerdictDistributionChart";
 import { ScoreTrendChart } from "@/components/analytics/ScoreTrendChart";
-import { getVerdictLabel, getVerdictBadgeClass, getVerdictChartColor, VerdictType } from "@/lib/verdicts";
+import { getVerdictLabel, getVerdictChartColor, VerdictType } from "@/lib/verdicts";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { DashboardRecentReports } from "@/components/dashboard/DashboardRecentReports";
 
 export default async function DashboardPage() {
   let user = null;
@@ -48,6 +50,11 @@ export default async function DashboardPage() {
   startOfMonth.setHours(0,0,0,0);
   const reportsThisMonth = allReports.filter(r => new Date(r.createdAt) >= startOfMonth).length;
 
+  const savedReports = allReports.filter(r => r.isSaved).length;
+  const archivedReports = allReports.filter(r => r.isArchived).length;
+  const strongBuyCount = completedReports.filter(r => r.verdict === "STRONG_BUY").length;
+  const strongBuyPercent = completedReports.length > 0 ? Math.round((strongBuyCount / completedReports.length) * 100) : 0;
+
   // Chart Data: Verdict Distribution
   const verdicts = completedReports.reduce((acc: Record<string, number>, r) => {
     const verdictKey = r.verdict || "UNKNOWN";
@@ -67,7 +74,9 @@ export default async function DashboardPage() {
     score: r.aiScore || r.reportData?.investmentScore || 0
   }));
 
-  const recentReports = allReports.slice(0, 3);
+  // We pass a serialized version of reports to the client component to prevent errors
+  // Using JSON.parse(JSON.stringify()) ensures all nested ObjectIds and Dates are converted to primitive strings
+  const recentReports = JSON.parse(JSON.stringify(allReports.slice(0, 5)));
 
   return (
     <div className="space-y-8 w-full">
@@ -89,42 +98,13 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-border/50 shadow-sm bg-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
-            <FileText className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{totalReports}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50 shadow-sm bg-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-            <BarChart3 className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{avgScore}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50 shadow-sm bg-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Highest Score</CardTitle>
-            <Target className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{highestScore}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50 shadow-sm bg-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reports This Month</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{reportsThisMonth}</div>
-          </CardContent>
-        </Card>
+        <StatCard title="Total Reports" value={totalReports} icon={<FileText className="w-4 h-4" />} isNumeric />
+        <StatCard title="Avg Investment Score" value={avgScore} icon={<BarChart3 className="w-4 h-4" />} isNumeric />
+        <StatCard title="Highest Score" value={highestScore} icon={<Target className="w-4 h-4" />} isNumeric />
+        <StatCard title="Reports This Month" value={reportsThisMonth} icon={<TrendingUp className="w-4 h-4" />} isNumeric />
+        <StatCard title="Saved Reports" value={savedReports} icon={<Bookmark className="w-4 h-4" />} isNumeric />
+        <StatCard title="Archived Reports" value={archivedReports} icon={<Archive className="w-4 h-4" />} isNumeric />
+        <StatCard title="Strong Buy %" value={`${strongBuyPercent}%`} icon={<ShieldCheck className="w-4 h-4" />} isNumeric={false} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -158,58 +138,7 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold font-heading">Recent Reports</h2>
-          <Link href="/reports">
-            <Button variant="ghost" className="text-primary gap-1">
-              View All <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
-        </div>
-        
-        <div className="grid gap-4">
-          {recentReports.length > 0 ? recentReports.map((report) => (
-            <Link key={report._id.toString()} href={`/reports/${report._id}`}>
-              <Card className="hover:border-primary/40 hover:shadow-md transition-all cursor-pointer">
-                <CardContent className="p-4 sm:p-6 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center shrink-0">
-                      <FileText className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold">{report.companyName}</h4>
-                        {report.verdict && report.status === "completed" && (
-                          <Badge className={getVerdictBadgeClass(report.verdict)} variant="outline">
-                            {getVerdictLabel(report.verdict)}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground flex items-center gap-2">
-                        <span>{report.industry || "Unknown Industry"}</span>
-                        <span>•</span>
-                        <span>{new Date(report.createdAt).toLocaleDateString()}</span>
-                        {report.aiScore ? (
-                          <>
-                            <span>•</span>
-                            <span className="font-medium text-foreground">Score: {report.aiScore}</span>
-                          </>
-                        ) : null}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant={report.status === "completed" ? "default" : report.status === "failed" ? "destructive" : "secondary"} className="capitalize shrink-0 ml-4">
-                    {report.status}
-                  </Badge>
-                </CardContent>
-              </Card>
-            </Link>
-          )) : (
-            <p className="text-sm text-muted-foreground border border-dashed rounded-lg p-8 text-center bg-secondary/10">No reports generated yet. Start your first analysis!</p>
-          )}
-        </div>
-      </div>
+      <DashboardRecentReports initialReports={recentReports as any} />
     </div>
   );
 }

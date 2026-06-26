@@ -5,6 +5,7 @@ import Report from "@/models/Report";
 import { generateDueDiligenceReport, DueDiligenceInput } from "@/lib/ai/groq";
 import { scrapeWebsite } from "@/lib/scraper/websiteScraper";
 import { extractPdfText } from "@/lib/document/pdfParser";
+import { calculateOverallConfidence, generateAiMetadata } from "@/lib/ai/metadata";
 
 async function processReportInBackground(
   reportId: string, 
@@ -44,17 +45,22 @@ async function processReportInBackground(
       }
     }
 
+    const startTime = Date.now();
     const aiData = await generateDueDiligenceReport(input);
     
     // Dynamically import the map text function to determine the verdict enum
     const { mapTextToVerdictType } = await import("@/lib/verdicts");
     const verdictEnum = mapTextToVerdictType(aiData.investmentVerdict?.label);
+
+    const overallConfidence = calculateOverallConfidence(aiData.dataQuality as any, aiData.sectionConfidence as any);
+    const aiMetadata = generateAiMetadata(startTime, overallConfidence);
     
     await Report.findByIdAndUpdate(reportId, {
       status: "completed",
       reportData: aiData,
-      aiScore: aiData.investmentScore || 0,
+      aiScore: typeof aiData.investmentScore === 'number' ? aiData.investmentScore : 0,
       verdict: verdictEnum,
+      aiMetadata
     });
   } catch (error) {
     console.error("Groq generation failed:", error);

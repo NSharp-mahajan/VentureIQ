@@ -12,21 +12,21 @@ export const VERDICT_LABELS: Record<VerdictType, string> = {
 };
 
 export const VERDICT_BADGE_CLASSES: Record<VerdictType, string> = {
-  STRONG_BUY: "bg-green-500 hover:bg-green-600 text-white border-green-600",
-  BUY: "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600",
-  HOLD: "bg-amber-500 hover:bg-amber-600 text-white border-amber-600",
-  CAUTION: "bg-orange-500 hover:bg-orange-600 text-white border-orange-600",
+  STRONG_BUY: "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600",
+  BUY: "bg-green-500 hover:bg-green-600 text-white border-green-600",
+  HOLD: "bg-blue-500 hover:bg-blue-600 text-white border-blue-600",
+  CAUTION: "bg-amber-500 hover:bg-amber-600 text-white border-amber-600",
   AVOID: "bg-red-500 hover:bg-red-600 text-white border-red-600",
-  UNKNOWN: "bg-muted hover:bg-muted/80 text-muted-foreground border-border",
+  UNKNOWN: "bg-gray-500 hover:bg-gray-600 text-white border-gray-600",
 };
 
 export const VERDICT_CHART_COLORS: Record<VerdictType, string> = {
-  STRONG_BUY: "#22c55e", // green-500
-  BUY: "#10b981", // emerald-500
-  HOLD: "#f59e0b", // amber-500
-  CAUTION: "#f97316", // orange-500
+  STRONG_BUY: "#10b981", // emerald-500
+  BUY: "#22c55e", // green-500
+  HOLD: "#3b82f6", // blue-500
+  CAUTION: "#f59e0b", // amber-500
   AVOID: "#ef4444", // red-500
-  UNKNOWN: "#94a3b8", // slate-400
+  UNKNOWN: "#6b7280", // gray-500
 };
 
 export function getVerdictLabel(verdict?: VerdictType | string | null): string {

@@ -32,17 +32,53 @@ export interface IGrowthOpportunity {
   timeframe: "short-term" | "mid-term" | "long-term";
 }
 
+export interface IScoreBreakdownItem {
+  score: number;
+  reason: string;
+}
+
 export interface IScoreBreakdown {
-  marketOpportunity: number;
-  productStrength: number;
-  scalability: number;
-  competitiveMoat: number;
-  riskLevel: number;
+  marketOpportunity: number | IScoreBreakdownItem;
+  productStrength: number | IScoreBreakdownItem;
+  scalability: number | IScoreBreakdownItem;
+  competitiveMoat: number | IScoreBreakdownItem;
+  riskLevel: number | IScoreBreakdownItem;
 }
 
 export interface IInvestmentVerdict {
   label: string;
   summary: string;
+  reasoning?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  assumptions?: string[];
+}
+
+export interface IDataQuality {
+  websiteAnalyzed: boolean;
+  documentsAnalyzed: number;
+  completeness: string;
+  missingInfo: string[];
+  estimatedReliability: number;
+}
+
+export interface ISectionConfidence {
+  executiveSummary: number;
+  marketAnalysis: number;
+  riskAssessment: number;
+  competitorAnalysis: number;
+  financialHealth: number;
+}
+
+export interface ISourceAttribution {
+  executiveSummary?: string[];
+  marketAnalysis?: string[];
+  riskAssessment?: string[];
+  keyInsights?: string[];
+  swot?: string[];
+  competitorAnalysis?: string[];
+  growthOpportunities?: string[];
+  redFlags?: string[];
 }
 
 export interface IReportData {
@@ -58,12 +94,23 @@ export interface IReportData {
   growthOpportunities?: IGrowthOpportunity[];
   scoreBreakdown?: IScoreBreakdown;
   investmentVerdict?: IInvestmentVerdict;
+  dataQuality?: IDataQuality;
+  sectionConfidence?: ISectionConfidence;
+  sourceAttribution?: ISourceAttribution;
 }
 
 export interface IDocumentData {
   fileName: string;
   fileType: string;
   extractedText: string;
+}
+
+export interface IAiMetadata {
+  modelUsed: string;
+  generationTimestamp: Date;
+  processingDurationMs: number;
+  promptVersion: string;
+  overallConfidenceScore: number;
 }
 
 export interface IReport {
@@ -86,6 +133,7 @@ export interface IReport {
   errorMessage?: string;
   aiScore?: number;
   reportData?: IReportData;
+  aiMetadata?: IAiMetadata;
   verdict?: VerdictType;
   isSaved?: boolean;
   isArchived?: boolean;

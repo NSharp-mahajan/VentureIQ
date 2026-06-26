@@ -50,13 +50,17 @@ Users simply provide a startup idea, business description, website URL, or pitch
 - 🥊 **Competitor Analysis**
 - 🏗️ **SWOT Analysis**
 - 🛡️ **Risk Assessment**
-- 💵 **Revenue Opportunities**
-- 💡 **AI-Based Recommendations**
+- 💵 **Revenue & Growth Opportunities**
+- 💡 **AI-Based Recommendations & Investment Verdict**
 
 ### ✨ Key Capabilities
 
+- **Explainable AI (XAI)**: Full transparency into AI reasoning. Every score and verdict includes detailed justifications, AI assumptions, and data quality confidence metrics.
+- **Source Attribution**: Instantly know if a key insight was scraped from the company's website, parsed from an uploaded PDF, or inferred by the AI.
+- **Premium Analytics Dashboard**: Visualize due diligence data across your entire library with smooth, gradient-filled charts built on Recharts.
 - **Website Intelligence**: Automatically scrapes live websites to extract accurate, up-to-date marketing and technical data for due diligence.
 - **Document Intelligence**: Parses and analyzes uploaded PDF pitch decks, business plans, and financial reports, ensuring highly accurate context-aware analysis.
+- **PDF Exports**: Generate polished, printable PDF tear-sheets directly from the web application using `@react-pdf/renderer`.
 
 *This allows users to make faster, sharper, and more informed decisions.*
 
@@ -85,7 +89,7 @@ This project was chosen because business evaluation is a genuine, ubiquitous cha
 
 ---
 
-## 💻 Tech Stack (So Far)
+## 💻 Tech Stack
 
 This project is built using modern, production-grade tools:
 
@@ -95,6 +99,8 @@ This project is built using modern, production-grade tools:
 - **Authentication**: [Clerk](https://clerk.com/) for secure, robust identity management
 - **Database**: [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) with Mongoose for scalable report storage
 - **AI Engine**: [Groq SDK](https://groq.com/) powering instantaneous inference using `llama-3.3-70b-versatile`
+- **Data Visualization**: [Recharts](https://recharts.org/) for interactive dashboard analytics
+- **Document Processing**: `pdf-parse` for text extraction and `@react-pdf/renderer` for high-fidelity exports
 - **Animation**: [Framer Motion](https://www.framer.com/motion/) for subtle, professional micro-interactions
 
 ---
