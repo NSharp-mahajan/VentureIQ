@@ -11,7 +11,26 @@ export interface IReportDocument extends Document {
   documents?: {
     fileName: string;
     fileType: string;
+    sizeBytes?: number;
+    uploadTimestamp?: Date;
     extractedText: string;
+    analysis?: {
+      executiveSummary?: string;
+      keyBusinessHighlights?: string[];
+      financialMentions?: string[];
+      productInformation?: string;
+      risks?: string[];
+      teamInformation?: string;
+      marketInformation?: string;
+      missingInformation?: string[];
+    };
+    metadata?: {
+      pageCount?: number;
+      wordCount?: number;
+      processingDurationMs?: number;
+      extractionSuccess?: boolean;
+      extractionConfidence?: number;
+    };
   }[];
   scrapedData?: {
     title: string;
@@ -122,7 +141,11 @@ const ReportSchema = new Schema<IReportDocument>(
       {
         fileName: { type: String },
         fileType: { type: String },
+        sizeBytes: { type: Number },
+        uploadTimestamp: { type: Date },
         extractedText: { type: String },
+        analysis: { type: Schema.Types.Mixed },
+        metadata: { type: Schema.Types.Mixed },
       },
     ],
     scrapedData: {

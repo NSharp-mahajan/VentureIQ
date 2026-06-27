@@ -16,6 +16,16 @@ export interface DueDiligenceInput {
     fileName: string;
     fileType: string;
     extractedText: string;
+    analysis?: {
+      executiveSummary?: string;
+      keyBusinessHighlights?: string[];
+      financialMentions?: string[];
+      productInformation?: string;
+      risks?: string[];
+      teamInformation?: string;
+      marketInformation?: string;
+      missingInformation?: string[];
+    };
   }[];
 }
 
@@ -50,12 +60,28 @@ ${input.scrapedData.content}
 
   if (input.documentsData && input.documentsData.length > 0) {
     prompt += `
-Additionally, the user has uploaded the following internal documents. Please treat this extracted text as a highly credible PRIMARY source for your analysis.
+Additionally, the user has uploaded the following internal documents. We have pre-analyzed them to extract key insights. Please treat this extracted intelligence as a highly credible PRIMARY source for your analysis. If you use this information, attribute it to "Uploaded Documents" in the sourceAttribution mapping.
 `;
     input.documentsData.forEach((doc, idx) => {
       prompt += `
 --- Document ${idx + 1}: ${doc.fileName} ---
-${doc.extractedText}
+`;
+      if (doc.analysis) {
+        prompt += `
+Document AI Analysis:
+- Executive Summary: ${doc.analysis.executiveSummary || "N/A"}
+- Key Highlights: ${doc.analysis.keyBusinessHighlights?.join(", ") || "N/A"}
+- Financial Mentions: ${doc.analysis.financialMentions?.join(", ") || "N/A"}
+- Product Info: ${doc.analysis.productInformation || "N/A"}
+- Risks: ${doc.analysis.risks?.join(", ") || "N/A"}
+- Team: ${doc.analysis.teamInformation || "N/A"}
+- Market Info: ${doc.analysis.marketInformation || "N/A"}
+`;
+      }
+      
+      prompt += `
+Raw Text Preview (Truncated):
+${doc.extractedText.substring(0, 3000)}...
 `;
     });
   }

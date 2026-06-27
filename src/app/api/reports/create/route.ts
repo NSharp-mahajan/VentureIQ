@@ -4,14 +4,15 @@ import { connectDB } from "@/lib/db";
 import Report from "@/models/Report";
 import { generateDueDiligenceReport, DueDiligenceInput } from "@/lib/ai/groq";
 import { scrapeWebsite } from "@/lib/scraper/websiteScraper";
-import { extractPdfText } from "@/lib/document/pdfParser";
 import { calculateOverallConfidence, generateAiMetadata } from "@/lib/ai/metadata";
+import { extractDocument } from "@/lib/document/documentExtractor";
+import { analyzeDocument } from "@/lib/document/documentAnalyzer";
 
 async function processReportInBackground(
   reportId: string, 
   input: DueDiligenceInput, 
   websiteUrl?: string,
-  filesData?: { name: string; type: string; buffer: Buffer }[]
+  filesData?: { name: string; type: string; size: number; buffer: Buffer }[]
 ) {
   try {
     await connectDB();
@@ -28,11 +29,21 @@ async function processReportInBackground(
       const processedDocuments = [];
       for (const file of filesData) {
         try {
-          const extractedText = await extractPdfText(file.buffer);
+          const { text, metadata } = await extractDocument(file.buffer, file.name, file.type, file.size);
+          
+          let analysis;
+          if (text && text.length > 100) {
+            analysis = await analyzeDocument(text, file.name);
+          }
+
           processedDocuments.push({
             fileName: file.name,
             fileType: file.type,
-            extractedText
+            sizeBytes: file.size,
+            uploadTimestamp: new Date(),
+            extractedText: text,
+            metadata,
+            analysis
           });
         } catch (err) {
           console.error(`Failed to parse document ${file.name}:`, err);
@@ -96,10 +107,13 @@ export async function POST(req: Request) {
     
     for (const doc of documents) {
       if (doc instanceof File) {
-        const buffer = Buffer.from(await doc.arrayBuffer());
+        const arrayBuffer = await doc.arrayBuffer();
+        const buffer = Buffer.alloc(arrayBuffer.byteLength);
+        Buffer.from(arrayBuffer).copy(buffer);
         filesData.push({
           name: doc.name,
           type: doc.type,
+          size: doc.size,
           buffer
         });
       }

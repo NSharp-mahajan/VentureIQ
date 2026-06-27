@@ -99,10 +99,33 @@ export interface IReportData {
   sourceAttribution?: ISourceAttribution;
 }
 
+export interface IDocumentAnalysis {
+  executiveSummary?: string;
+  keyBusinessHighlights?: string[];
+  financialMentions?: string[];
+  productInformation?: string;
+  risks?: string[];
+  teamInformation?: string;
+  marketInformation?: string;
+  missingInformation?: string[];
+}
+
+export interface IDocumentMetadata {
+  pageCount?: number;
+  wordCount?: number;
+  processingDurationMs?: number;
+  extractionSuccess?: boolean;
+  extractionConfidence?: number;
+}
+
 export interface IDocumentData {
   fileName: string;
   fileType: string;
+  sizeBytes?: number;
+  uploadTimestamp?: Date;
   extractedText: string;
+  analysis?: IDocumentAnalysis;
+  metadata?: IDocumentMetadata;
 }
 
 export interface IAiMetadata {

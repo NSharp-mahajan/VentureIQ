@@ -401,13 +401,94 @@ export default function ReportPage() {
                   <p className="text-muted-foreground text-sm">No documents were uploaded for this analysis.</p>
                 ) : (
                   report.documents.map((doc, idx) => (
-                    <div key={idx} className="border border-border/50 rounded-lg p-4 bg-secondary/5">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FileText className="w-5 h-5 text-primary" />
-                        <h4 className="font-semibold text-sm">{doc.fileName}</h4>
+                    <div key={idx} className="border border-border/50 rounded-xl overflow-hidden bg-background shadow-sm">
+                      <div className="bg-secondary/20 p-4 border-b border-border/50 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <FileText className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-base truncate max-w-[200px] sm:max-w-[300px]">{doc.fileName}</h4>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider">{doc.fileType.split('/').pop()} • {doc.sizeBytes ? (doc.sizeBytes / 1024).toFixed(1) + ' KB' : 'Unknown Size'}</p>
+                          </div>
+                        </div>
+                        {doc.metadata && (
+                          <div className="flex items-center gap-4 text-xs">
+                            <div className="text-center">
+                              <p className="text-muted-foreground mb-1 uppercase tracking-wider">Pages</p>
+                              <p className="font-semibold">{doc.metadata.pageCount || 1}</p>
+                            </div>
+                            <div className="text-center border-l border-border/50 pl-4">
+                              <p className="text-muted-foreground mb-1 uppercase tracking-wider">Extraction</p>
+                              <p className="font-semibold flex items-center justify-center gap-1">
+                                {doc.metadata.extractionSuccess ? <CheckCircle className="w-3 h-3 text-green-500" /> : <AlertTriangle className="w-3 h-3 text-red-500" />}
+                                {doc.metadata.extractionConfidence}%
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="bg-background border border-border/30 p-3 rounded text-xs text-muted-foreground max-h-[250px] overflow-y-auto whitespace-pre-wrap">
-                        {doc.extractedText || "No text could be extracted from this document."}
+                      
+                      <div className="p-4 space-y-4">
+                        {doc.analysis ? (
+                          <div className="grid md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                              {doc.analysis.executiveSummary && (
+                                <div>
+                                  <h5 className="text-sm font-bold text-foreground mb-1">Document Summary</h5>
+                                  <p className="text-sm text-muted-foreground">{doc.analysis.executiveSummary}</p>
+                                </div>
+                              )}
+                              {doc.analysis.keyBusinessHighlights && doc.analysis.keyBusinessHighlights.length > 0 && (
+                                <div>
+                                  <h5 className="text-sm font-bold text-foreground mb-1">Key Highlights</h5>
+                                  <ul className="space-y-1">
+                                    {doc.analysis.keyBusinessHighlights.map((h, i) => (
+                                      <li key={i} className="text-xs flex gap-2"><span className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" /> {h}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {doc.analysis.missingInformation && doc.analysis.missingInformation.length > 0 && (
+                                <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-md">
+                                  <h5 className="text-xs font-bold text-amber-600 mb-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Missing Context</h5>
+                                  <ul className="space-y-1">
+                                    {doc.analysis.missingInformation.map((m, i) => <li key={i} className="text-xs text-amber-700/80">• {m}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-4 border-t md:border-t-0 md:border-l border-border/30 pt-4 md:pt-0 md:pl-4">
+                              {doc.analysis.financialMentions && doc.analysis.financialMentions.length > 0 && (
+                                <div>
+                                  <h5 className="text-sm font-bold text-foreground mb-1">Financial Data</h5>
+                                  <ul className="space-y-1">
+                                    {doc.analysis.financialMentions.map((f, i) => <li key={i} className="text-xs text-muted-foreground">• {f}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+                              {doc.analysis.risks && doc.analysis.risks.length > 0 && (
+                                <div>
+                                  <h5 className="text-sm font-bold text-foreground mb-1">Identified Risks</h5>
+                                  <ul className="space-y-1">
+                                    {doc.analysis.risks.map((r, i) => <li key={i} className="text-xs text-muted-foreground">• {r}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+                              {doc.analysis.teamInformation && (
+                                <div>
+                                  <h5 className="text-sm font-bold text-foreground mb-1">Team Information</h5>
+                                  <p className="text-xs text-muted-foreground">{doc.analysis.teamInformation}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-secondary/5 border border-border/30 p-3 rounded text-xs text-muted-foreground max-h-[150px] overflow-y-auto whitespace-pre-wrap">
+                            <p className="font-semibold mb-2">Raw Extracted Text (Legacy):</p>
+                            {doc.extractedText || "No text could be extracted from this document."}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))

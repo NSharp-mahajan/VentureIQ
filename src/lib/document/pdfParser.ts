@@ -16,10 +16,11 @@ if (typeof global !== 'undefined') {
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require("pdf-parse");
 
-export async function extractPdfText(buffer: Buffer): Promise<string> {
+export async function extractPdfText(buffer: Buffer): Promise<{ text: string; pageCount: number }> {
   try {
     const data = await pdfParse(buffer);
     let text = data.text;
+    const pageCount = data.numpages || 1;
     
     // Clean up whitespace
     text = text.replace(/\s+/g, " ").trim();
@@ -29,7 +30,7 @@ export async function extractPdfText(buffer: Buffer): Promise<string> {
       text = text.substring(0, 15000) + "... [CONTENT TRUNCATED]";
     }
     
-    return text;
+    return { text, pageCount };
   } catch (error) {
     console.error("PDF Parsing failed:", error);
     throw new Error("Failed to parse PDF document");
