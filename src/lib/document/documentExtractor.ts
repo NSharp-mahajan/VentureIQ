@@ -1,5 +1,5 @@
 import { IDocumentMetadata } from "@/types/report";
-import { extractPdfText } from "./pdfParser";
+
 import { parseOffice } from "officeparser";
 
 export async function extractDocument(
@@ -15,20 +15,18 @@ export async function extractDocument(
   let extractionConfidence = 0;
 
   try {
-    if (fileType === "application/pdf" || fileName.toLowerCase().endsWith(".pdf")) {
-      const result = await extractPdfText(buffer);
-      text = result.text;
-      pageCount = result.pageCount;
-      extractionSuccess = true;
-      extractionConfidence = 95;
-    } else if (
+    if (
+      fileType === "application/pdf" || 
+      fileName.toLowerCase().endsWith(".pdf") ||
       fileType.includes("wordprocessingml.document") || 
       fileType.includes("presentationml.presentation") ||
       fileName.toLowerCase().endsWith(".docx") ||
       fileName.toLowerCase().endsWith(".pptx")
     ) {
-      // Use officeparser
-      text = await parseOffice(buffer) as unknown as string;
+      // Use officeparser for PDF, DOCX, PPTX
+      const ast = await parseOffice(buffer);
+      text = ast.toText();
+      
       if (text) {
         text = text.replace(/\s+/g, " ").trim();
       }
@@ -37,9 +35,9 @@ export async function extractDocument(
         text = text.substring(0, 15000) + "... [CONTENT TRUNCATED]";
       }
       extractionSuccess = true;
-      extractionConfidence = 90;
-      // approximate page count (about 300 words per page)
-      pageCount = Math.max(1, Math.ceil((text?.split(/\s+/).length || 1) / 300));
+      extractionConfidence = fileName.toLowerCase().endsWith(".pdf") ? 95 : 90;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      pageCount = (ast.metadata as any)?.pageCount || Math.max(1, Math.ceil((text?.split(/\s+/).length || 1) / 300));
     } else if (fileType === "text/plain" || fileName.toLowerCase().endsWith(".txt")) {
       text = buffer.toString("utf-8");
       text = text.replace(/\s+/g, " ").trim();

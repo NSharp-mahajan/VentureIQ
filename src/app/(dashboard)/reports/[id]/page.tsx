@@ -194,7 +194,12 @@ export default function ReportPage() {
           </p>
         </div>
         <div className="sm:ml-auto flex gap-2 w-full sm:w-auto items-center">
-          <Button variant="outline" className="flex-1 sm:flex-none"><Share2 className="w-4 h-4 mr-2" /> Share</Button>
+          <Link href={`/reports/${report._id}/copilot`} className="flex-1 sm:flex-none">
+            <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600">
+              <BrainCircuit className="w-4 h-4 mr-2" /> AI Copilot
+            </Button>
+          </Link>
+          <Button variant="outline" className="hidden sm:flex"><Share2 className="w-4 h-4 mr-2" /> Share</Button>
           <ExportPDFButton report={report} />
           
           <ReportActionMenu 
