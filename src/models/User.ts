@@ -7,6 +7,7 @@ export interface IUserDocument extends Document {
   imageUrl?: string;
   createdAt: Date;
   updatedAt: Date;
+  
 }
 
 const UserSchema = new Schema<IUserDocument>(
