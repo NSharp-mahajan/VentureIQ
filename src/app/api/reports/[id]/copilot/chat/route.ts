@@ -5,6 +5,7 @@ import { connectDB } from "@/lib/db";
 import Report from "@/models/Report";
 import Conversation from "@/models/Conversation";
 import Message from "@/models/Message";
+import WorkspaceMember from "@/models/WorkspaceMember";
 import Groq from "groq-sdk";
 
 const groq = new Groq({
@@ -30,17 +31,23 @@ export async function POST(
     const resolvedParams = await params;
 
     // Verify ownership and load report
-    const report = await Report.findOne({ _id: resolvedParams.id, userId });
+    const report = await Report.findById(resolvedParams.id);
     if (!report) {
       return NextResponse.json({ error: "Report not found" }, { status: 404 });
     }
 
-    // Load or create conversation
-    let conversation = await Conversation.findOne({ reportId: resolvedParams.id, userId });
+    if (report.userId !== userId) {
+      if (!report.workspaceId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      const membership = await WorkspaceMember.findOne({ workspaceId: report.workspaceId, userId });
+      if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Load or create conversation (shared per report)
+    let conversation = await Conversation.findOne({ reportId: resolvedParams.id });
     if (!conversation) {
       conversation = new Conversation({
         reportId: resolvedParams.id,
-        userId,
+        userId: report.userId, // The original creator owns the conversation technically
       });
       await conversation.save();
     }

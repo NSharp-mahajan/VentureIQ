@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { connectDB } from "@/lib/db";
@@ -8,6 +8,8 @@ import { scrapeWebsite } from "@/lib/scraper/websiteScraper";
 import { calculateOverallConfidence, generateAiMetadata } from "@/lib/ai/metadata";
 import { extractDocument } from "@/lib/document/documentExtractor";
 import { analyzeDocument } from "@/lib/document/documentAnalyzer";
+import WorkspaceMember from "@/models/WorkspaceMember";
+import Activity from "@/models/Activity";
 
 async function processReportInBackground(
   reportId: string, 
@@ -101,6 +103,7 @@ export async function POST(req: Request) {
     const businessDescription = formData.get("businessDescription") as string;
     const websiteUrl = formData.get("websiteUrl") as string;
     const notes = formData.get("notes") as string;
+    const workspaceId = formData.get("workspaceId") as string;
     
     // Extract files
     const documents = formData.getAll("documents");
@@ -129,7 +132,16 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    const report = await Report.create({
+    let finalWorkspaceId: string | undefined = undefined;
+    if (workspaceId && workspaceId !== "none") {
+      const membership = await WorkspaceMember.findOne({ workspaceId, userId: user.id });
+      if (!membership) {
+        return NextResponse.json({ error: "Invalid workspace selection" }, { status: 403 });
+      }
+      finalWorkspaceId = workspaceId;
+    }
+
+    const reportPayload: any = {
       userId: user.id,
       companyName,
       industry,
@@ -149,7 +161,13 @@ export async function POST(req: Request) {
         recommendation: "",
         keyInsights: [],
       },
-    });
+    };
+
+    if (finalWorkspaceId) {
+      reportPayload.workspaceId = finalWorkspaceId;
+    }
+
+    const report = await Report.create(reportPayload);
 
     const aiInput: DueDiligenceInput = {
       companyName,
@@ -162,6 +180,15 @@ export async function POST(req: Request) {
 
     // Fire and forget background process
     processReportInBackground(String(report._id), aiInput, websiteUrl, filesData);
+
+    if (finalWorkspaceId) {
+      await Activity.create({
+        workspaceId: finalWorkspaceId,
+        userId: user.id,
+        action: "Created Report",
+        metadata: { reportId: String(report._id), companyName },
+      });
+    }
 
     return NextResponse.json({ success: true, reportId: String(report._id) });
   } catch (error) {

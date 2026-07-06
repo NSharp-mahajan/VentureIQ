@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IReportDocument extends Document {
   userId: string;
+  workspaceId?: mongoose.Types.ObjectId | string;
   companyName: string;
   industry?: string;
   targetMarket?: string;
@@ -131,6 +132,7 @@ export interface IReportDocument extends Document {
 const ReportSchema = new Schema<IReportDocument>(
   {
     userId: { type: String, required: true, index: true },
+    workspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", index: true },
     companyName: { type: String, required: true },
     industry: { type: String },
     targetMarket: { type: String },

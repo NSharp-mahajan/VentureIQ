@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,6 +19,7 @@ import { AnimatedCounter } from "@/components/common/AnimatedCounter";
 import dynamic from "next/dynamic";
 
 const ExportPDFButton = dynamic(() => import("@/components/pdf/ExportPDFButton"), { ssr: false });
+import { ReportComments } from "@/components/reports/ReportComments";
 
 export default function ReportPage() {
   const params = useParams();
@@ -835,6 +836,7 @@ export default function ReportPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      <ReportComments reportId={report._id} workspaceId={report.workspaceId} />
     </div>
   );
 }

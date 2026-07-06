@@ -139,6 +139,7 @@ export interface IAiMetadata {
 export interface IReport {
   _id: string;
   userId: string;
+  workspaceId?: string;
   companyName: string;
   industry?: string;
   targetMarket?: string;

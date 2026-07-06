@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { connectDB } from "@/lib/db";
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     }
 
     // Build context
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const buildReportContext = (r: any) => {
       let ctx = `Company: ${r.companyName}\n`;
       ctx += `Industry: ${r.industry || "N/A"}\n`;

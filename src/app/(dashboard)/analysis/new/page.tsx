@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -24,7 +24,19 @@ export default function NewAnalysisPage() {
     analysisType: "",
     businessDescription: "",
     notes: "",
+    workspaceId: "none",
   });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/workspaces")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setWorkspaces(data);
+      })
+      .catch(console.error);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -143,6 +155,20 @@ export default function NewAnalysisPage() {
                   <SelectItem value="Financial Modeling">Financial Modeling</SelectItem>
                   <SelectItem value="Market Landscape">Market Landscape</SelectItem>
                   <SelectItem value="Risk Assessment">Risk Assessment</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="workspaceId">Attach to Workspace (Optional)</Label>
+              <Select onValueChange={(val: string | null) => handleSelectChange("workspaceId", val)} value={formData.workspaceId} disabled={loading}>
+                <SelectTrigger id="workspaceId">
+                  <SelectValue placeholder="Select a workspace" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Personal (No Workspace)</SelectItem>
+                  {workspaces.map(ws => (
+                    <SelectItem key={ws._id} value={ws._id}>{ws.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

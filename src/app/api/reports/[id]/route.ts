@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { connectDB } from "@/lib/db";
 import Report from "@/models/Report";
+import WorkspaceMember from "@/models/WorkspaceMember";
 
 export async function GET(
   req: Request,
@@ -22,10 +23,20 @@ export async function GET(
 
     await connectDB();
 
-    const report = await Report.findOne({ _id: id, userId: user.id }).lean();
+    const report = await Report.findById(id).lean();
 
     if (!report || report.deletedAt) {
       return NextResponse.json({ error: "Report not found" }, { status: 404 });
+    }
+
+    if (report.userId !== user.id) {
+      if (!report.workspaceId) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      const membership = await WorkspaceMember.findOne({ workspaceId: report.workspaceId, userId: user.id });
+      if (!membership) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     return NextResponse.json({ success: true, report });
@@ -50,8 +61,16 @@ export async function PATCH(
 
     await connectDB();
 
-    const report = await Report.findOne({ _id: id, userId: user.id });
-    if (!report) return NextResponse.json({ error: "Report not found" }, { status: 404 });
+    const report = await Report.findById(id);
+    if (!report || report.deletedAt) return NextResponse.json({ error: "Report not found" }, { status: 404 });
+
+    if (report.userId !== user.id) {
+      if (!report.workspaceId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      const membership = await WorkspaceMember.findOne({ workspaceId: report.workspaceId, userId: user.id });
+      if (!membership || membership.role === "MEMBER") {
+        return NextResponse.json({ error: "Forbidden: Admins or Owners only" }, { status: 403 });
+      }
+    }
 
     switch (action) {
       case "save":

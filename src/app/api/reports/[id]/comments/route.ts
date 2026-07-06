@@ -1,15 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import Conversation from "@/models/Conversation";
-import Message from "@/models/Message";
+import Comment from "@/models/Comment";
 import Report from "@/models/Report";
 import WorkspaceMember from "@/models/WorkspaceMember";
+import Activity from "@/models/Activity";
+import { clerkClient } from "@clerk/nextjs/server";
 
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { userId } = await auth();
     if (!userId) return new NextResponse("Unauthorized", { status: 401 });
@@ -20,44 +18,30 @@ export async function GET(
     const report = await Report.findById(resolvedParams.id);
     if (!report) return new NextResponse("Not Found", { status: 404 });
 
+    // Check permission
     if (report.userId !== userId) {
       if (!report.workspaceId) return new NextResponse("Forbidden", { status: 403 });
+      
       const membership = await WorkspaceMember.findOne({ workspaceId: report.workspaceId, userId });
       if (!membership) return new NextResponse("Forbidden", { status: 403 });
     }
 
-    const conversation = await Conversation.findOne({ reportId: resolvedParams.id }).lean();
-    if (!conversation) {
-      return NextResponse.json({ messages: [] });
-    }
+    const comments = await Comment.find({ reportId: resolvedParams.id }).sort({ createdAt: 1 }).lean();
 
-    const messages = await Message.find({ conversationId: conversation._id })
-      .sort({ createdAt: 1 })
-      .lean();
-
-    return NextResponse.json({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      messages: messages.map((m: any) => ({
-        id: m._id?.toString() || Math.random().toString(),
-        role: m.role,
-        content: m.content,
-        createdAt: m.createdAt,
-      })),
-      title: conversation.title || null,
-    });
+    return NextResponse.json(comments);
   } catch (error) {
-    console.error("Copilot History Error:", error);
+    console.error("Fetch Comments Error:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { userId } = await auth();
     if (!userId) return new NextResponse("Unauthorized", { status: 401 });
+
+    const { content } = await req.json();
+    if (!content) return NextResponse.json({ error: "Content is required" }, { status: 400 });
 
     await connectDB();
     const resolvedParams = await params;
@@ -67,20 +51,29 @@ export async function DELETE(
 
     if (report.userId !== userId) {
       if (!report.workspaceId) return new NextResponse("Forbidden", { status: 403 });
+      
       const membership = await WorkspaceMember.findOne({ workspaceId: report.workspaceId, userId });
-      if (!membership || membership.role === "MEMBER") return new NextResponse("Forbidden", { status: 403 });
+      if (!membership) return new NextResponse("Forbidden", { status: 403 });
     }
 
-    const conversation = await Conversation.findOne({ reportId: resolvedParams.id });
-    
-    if (conversation) {
-      await Message.deleteMany({ conversationId: conversation._id });
-      await Conversation.deleteOne({ _id: conversation._id });
+    const comment = await Comment.create({
+      reportId: resolvedParams.id,
+      authorId: userId,
+      content,
+    });
+
+    if (report.workspaceId) {
+      await Activity.create({
+        workspaceId: report.workspaceId,
+        userId,
+        action: "Commented on Report",
+        metadata: { reportId: resolvedParams.id, companyName: report.companyName },
+      });
     }
-    
-    return NextResponse.json({ success: true });
+
+    return NextResponse.json(comment);
   } catch (error) {
-    console.error("Copilot Delete Error:", error);
+    console.error("Create Comment Error:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
