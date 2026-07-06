@@ -46,6 +46,7 @@ export default function CopilotPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationTitle, setConversationTitle] = useState<string | null>(null);
 
   // Load report and initial chat history
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function CopilotPage() {
       try {
         const [reportRes, historyRes] = await Promise.all([
           fetch(`/api/reports/${id}`),
-          fetch(`/api/reports/${id}/copilot/chat`)
+          fetch(`/api/reports/${id}/copilot/history`)
         ]);
 
         const reportData = await reportRes.json();
@@ -67,6 +68,9 @@ export default function CopilotPage() {
 
         if (historyData.messages) {
           setMessages(historyData.messages);
+        }
+        if (historyData.title) {
+          setConversationTitle(historyData.title);
         }
       } catch (error) {
         toast.error("Failed to initialize Copilot");
@@ -88,7 +92,7 @@ export default function CopilotPage() {
     if (!confirm("Are you sure you want to clear this conversation?")) return;
     
     try {
-      const res = await fetch(`/api/reports/${id}/copilot/chat`, { method: "DELETE" });
+      const res = await fetch(`/api/reports/${id}/copilot/history`, { method: "DELETE" });
       if (res.ok) {
         setMessages([]);
         toast.success("Conversation cleared");
@@ -248,12 +252,14 @@ export default function CopilotPage() {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold font-heading">{report.companyName} Copilot</h1>
+              <h1 className="text-xl sm:text-2xl font-bold font-heading">{conversationTitle || `${report.companyName} Copilot`}</h1>
               <Badge variant="outline" className="bg-indigo-500/10 text-indigo-600 border-indigo-500/20 px-2 py-0.5">
                 <BrainCircuit className="w-3 h-3 mr-1 inline" /> AI Analyst
               </Badge>
             </div>
             <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+              {conversationTitle && <span className="font-medium text-foreground">{report.companyName}</span>}
+              {conversationTitle && <span className="w-1 h-1 rounded-full bg-border" />}
               <span className="font-medium text-foreground">Score: {reportScore}/100</span>
               <span className="w-1 h-1 rounded-full bg-border" />
               <Badge className={`${getVerdictBadgeClass(verdictLabel)} text-[10px] px-1.5 py-0`}>
