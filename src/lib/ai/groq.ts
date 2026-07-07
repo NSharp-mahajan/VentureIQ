@@ -193,3 +193,82 @@ Ensure that all numeric scores are integers from 0 to 100. For red flag severity
 
   return JSON.parse(jsonString);
 }
+
+export interface RawNewsArticle {
+  title: string;
+  description: string;
+  source: string;
+  url: string;
+}
+
+export interface AnalyzedNewsArticle {
+  aiSummary: string;
+  investorTakeaways: string[];
+  marketImpact: string;
+  sentiment: "Bullish" | "Neutral" | "Bearish";
+  confidenceScore: number;
+  category: string;
+}
+
+export async function analyzeNewsBatch(articles: RawNewsArticle[]): Promise<AnalyzedNewsArticle[]> {
+  if (articles.length === 0) return [];
+  
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error("GROQ_API_KEY is missing in .env.local");
+  }
+
+  const groq = new Groq({ apiKey });
+
+  const prompt = `You are an expert market intelligence AI. I will provide you with a list of news articles. 
+For each article, you must generate a financial intelligence analysis.
+
+Articles:
+${articles.map((a, i) => `
+[Article ${i}]
+Title: ${a.title}
+Description: ${a.description}
+Source: ${a.source}
+`).join("\n")}
+
+You must return ONLY a raw, valid JSON object with a single key "results" containing exactly ${articles.length} objects, in the same order as the articles provided.
+Do not include markdown code blocks.
+
+JSON format:
+{
+  "results": [
+    {
+      "aiSummary": "1-2 sentence concise summary.",
+      "investorTakeaways": ["Takeaway 1", "Takeaway 2"],
+      "marketImpact": "Brief description of the impact on the market",
+      "sentiment": "Bullish",
+      "confidenceScore": 85,
+      "category": "Funding"
+    }
+  ]
+}
+`;
+
+  const completion = await groq.chat.completions.create({
+    messages: [
+      { role: "system", content: "You are an expert financial analyst. Always output pure, valid JSON matching the requested schema." },
+      { role: "user", content: prompt },
+    ],
+    model: "llama-3.3-70b-versatile",
+    temperature: 0.2,
+    response_format: { type: "json_object" },
+  });
+
+  const content = completion.choices[0]?.message?.content;
+  if (!content) throw new Error("No content received from Groq.");
+
+  let jsonString = content.trim();
+  if (jsonString.startsWith("\`\`\`json")) {
+    jsonString = jsonString.replace(/^\`\`\`json/, "").replace(/\`\`\`$/, "").trim();
+  } else if (jsonString.startsWith("\`\`\`")) {
+    jsonString = jsonString.replace(/^\`\`\`/, "").replace(/\`\`\`$/, "").trim();
+  }
+
+  const parsed = JSON.parse(jsonString);
+  return parsed.results || [];
+}

@@ -2,10 +2,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { BrainCircuit, LayoutDashboard, PlusCircle, FileText, GitCompare, Settings, Users } from "lucide-react";
+import { BrainCircuit, LayoutDashboard, PlusCircle, FileText, GitCompare, Settings, Users, Globe } from "lucide-react";
 
 const routes = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { label: "Market Intelligence", icon: Globe, href: "/market-intelligence" },
   { label: "New Analysis", icon: PlusCircle, href: "/analysis/new" },
   { label: "Reports", icon: FileText, href: "/reports" },
   { label: "Workspaces", icon: Users, href: "/workspaces" },

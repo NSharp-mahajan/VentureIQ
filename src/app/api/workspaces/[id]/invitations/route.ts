@@ -1,9 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import WorkspaceMember from "@/models/WorkspaceMember";
 import WorkspaceInvitation from "@/models/WorkspaceInvitation";
+import Workspace from "@/models/Workspace";
 import Activity from "@/models/Activity";
+import { sendWorkspaceInviteEmail } from "@/lib/email";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -26,7 +28,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { userId } = await auth();
+    const user = await currentUser();
+    const userId = user?.id;
     if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
     const { email } = await req.json();
@@ -40,6 +43,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return new NextResponse("Forbidden", { status: 403 });
     }
 
+    const workspace = await Workspace.findById(resolvedParams.id);
+    if (!workspace) return new NextResponse("Workspace not found", { status: 404 });
+
     const invitation = await WorkspaceInvitation.create({
       workspaceId: resolvedParams.id,
       email,
@@ -52,6 +58,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       action: "Invited User",
       metadata: { email },
     });
+
+    const inviterName = user?.firstName ? `${user.firstName} ${user.lastName || ''}` : "A team member";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (req.headers.get("origin") || "http://localhost:3000");
+    const inviteLink = `${appUrl}/workspaces`; // They will see the invite in the workspaces dashboard
+
+    // Fire & forget the email so we don't block the response
+    sendWorkspaceInviteEmail(email, workspace.name, inviteLink, inviterName.trim());
 
     return NextResponse.json(invitation);
   } catch (error) {
