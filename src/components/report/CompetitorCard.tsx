@@ -19,16 +19,21 @@ export function CompetitorCard({ competitor }: Props) {
   const handleAnalyze = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/reports", {
+      const formData = new FormData();
+      formData.append("companyName", competitor.name);
+      formData.append("industry", competitor.industry || "Unknown");
+      formData.append("analysisType", "Full Due Diligence");
+      formData.append("businessDescription", competitor.oneLineDescription || "");
+
+      const res = await fetch("/api/reports/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyName: competitor.name })
+        body: formData
       });
       const data = await res.json();
       
-      if (res.ok && data._id) {
+      if (res.ok && data.reportId) {
         toast.success("Created report for competitor!");
-        router.push(`/dashboard/reports/${data._id}`);
+        router.push(`/reports/${data.reportId}`);
       } else {
         toast.error(data.error || "Failed to create report");
       }

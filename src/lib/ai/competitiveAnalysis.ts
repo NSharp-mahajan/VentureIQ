@@ -81,7 +81,7 @@ Ensure the JSON is strictly formatted and valid.`;
 
   const completion = await groq.chat.completions.create({
     messages: [{ role: "user", content: prompt }],
-    model: "llama3-8b-8192", // Using smaller model for speed, but if it fails we might need fallback
+    model: "llama-3.3-70b-versatile", // Using smaller model for speed, but if it fails we might need fallback
     temperature: 0.2,
   });
 
