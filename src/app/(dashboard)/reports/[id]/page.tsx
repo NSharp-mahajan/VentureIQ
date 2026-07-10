@@ -20,6 +20,7 @@ import dynamic from "next/dynamic";
 
 const ExportPDFButton = dynamic(() => import("@/components/pdf/ExportPDFButton"), { ssr: false });
 import { ReportComments } from "@/components/reports/ReportComments";
+import { CompetitorDiscoveryTab } from "@/components/report/CompetitorDiscoveryTab";
 
 export default function ReportPage() {
   const params = useParams();
@@ -317,7 +318,7 @@ export default function ReportPage() {
           <TabsTrigger value="documents">Document Intelligence</TabsTrigger>
           <TabsTrigger value="swot">SWOT Analysis</TabsTrigger>
           <TabsTrigger value="market">Market & Risks</TabsTrigger>
-          <TabsTrigger value="competitors">Competitors</TabsTrigger>
+          <TabsTrigger value="competitors">Competitor Discovery</TabsTrigger>
           <TabsTrigger value="risks">Red Flags</TabsTrigger>
           <TabsTrigger value="growth">Growth</TabsTrigger>
           <TabsTrigger value="scores">Scores</TabsTrigger>
@@ -598,29 +599,7 @@ export default function ReportPage() {
         </TabsContent>
 
         <TabsContent value="competitors">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Swords className="w-5 h-5 text-primary" /> Competitor Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {reportData?.competitorAnalysis ? (
-                <div className="space-y-6">
-                  <p className="text-sm text-muted-foreground">{reportData.competitorAnalysis.summary}</p>
-                  <div className="grid gap-4">
-                    {reportData.competitorAnalysis.topCompetitors.map((comp, idx) => (
-                      <div key={idx} className="border border-border/50 p-4 rounded-lg bg-secondary/10">
-                        <h4 className="font-semibold text-lg">{comp.name}</h4>
-                        <p className="text-sm text-muted-foreground mt-1"><span className="font-medium text-foreground">Why:</span> {comp.reason}</p>
-                        <p className="text-sm text-muted-foreground mt-1"><span className="font-medium text-foreground">Differentiation:</span> {comp.differentiation}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Competitor analysis not available for this report.</p>
-              )}
-            </CardContent>
-          </Card>
+          <CompetitorDiscoveryTab reportId={report._id} />
         </TabsContent>
 
         <TabsContent value="risks">

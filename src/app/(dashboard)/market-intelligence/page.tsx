@@ -11,6 +11,8 @@ import { Search, Loader2 } from "lucide-react";
 export default function MarketIntelligencePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [articles, setArticles] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [category, setCategory] = useState("All");
 
@@ -24,6 +26,7 @@ export default function MarketIntelligencePage() {
         if (res.ok) {
           const data = await res.json();
           setArticles(data.articles || []);
+          setStats(data.stats || null);
         }
       } catch (error) {
         console.error("Failed to fetch news:", error);
@@ -62,7 +65,7 @@ export default function MarketIntelligencePage() {
             </div>
           </div>
 
-          <MarketStats />
+          <MarketStats stats={stats} />
 
           <div className="flex items-center space-x-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
             {categories.map((cat) => (
